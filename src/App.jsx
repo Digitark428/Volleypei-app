@@ -1253,16 +1253,16 @@ export default function App(){
           getAllTournois(),
           getAllJoueurs(),
         ]);
-        setTournois(ts.map(t=>({...t, affiche: t.affiche_url||null})));
+        setTournois(ts);
         setInscrits(js);
       } catch(e){
-        console.error("Erreur chargement initial :", e);
+        // Supabase non configuré ou erreur réseau → on continue sans données
+        console.warn("Chargement Supabase ignoré :", e.message);
       } finally {
         setLoading(false);
       }
     }
     init();
-    // Route partenaires via hash
     if(window.location.hash==="#partenaires") setPage("partenaires");
   },[]);
 

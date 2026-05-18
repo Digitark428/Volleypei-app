@@ -168,3 +168,46 @@ export async function getDashboardStats() {
   if (e1 || e2 || e3) console.error('Stats error:', e1, e2, e3);
   return { nbJoueurs: nbJoueurs||0, nbOrganisateurs: nbOrganisateurs||0, nbTournois: nbTournois||0 };
 }
+
+// ══════════════════════ SIGNUP JOUEUR (Auth + profil) ════════════════════════
+
+export async function signUpJoueur({ prenom, nom, email, ville, password }) {
+  if (!supabaseConfigured)
+    return { id: Date.now(), prenom, nom, email: email.toLowerCase().trim(), ville: ville||'', role: 'joueur' };
+
+  // 1. Crée le compte Auth
+  const { data: authData, error: authErr } = await supabase.auth.signUp({
+    email: email.toLowerCase().trim(),
+    password,
+    options: { data: { prenom, nom, ville, role: 'joueur' } },
+  });
+  if (authErr) throw authErr;
+
+  // 2. Crée le profil dans la table joueurs
+  const { data: profil, error: profilErr } = await supabase
+    .from('joueurs')
+    .insert({ prenom: prenom.trim(), nom: nom.trim(), email: email.toLowerCase().trim(), ville: (ville||'').trim(), auth_user_id: authData.user.id })
+    .select().single();
+  if (profilErr) throw profilErr;
+
+  return { ...profil, role: 'joueur', session: authData.session };
+}
+
+export async function signInJoueur(email, password) {
+  if (!supabaseConfigured) throw new Error('Supabase non configuré');
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password,
+  });
+  if (error) throw error;
+
+  // Récupère le profil joueur
+  const { data: profil } = await supabase
+    .from('joueurs')
+    .select('*')
+    .eq('email', email.toLowerCase().trim())
+    .maybeSingle();
+
+  return { ...data, profil: { ...profil, role: 'joueur' } };
+}

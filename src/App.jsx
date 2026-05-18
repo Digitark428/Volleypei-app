@@ -3,7 +3,11 @@ import {
   getJoueurByEmail,
   createJoueur,
   getAllJoueurs,
+  signUpJoueur,
+  signInJoueur,
   signInOrganisateur,
+  signOut,
+  getSession,
   getOrganisateurByEmail,
   soumettreDemande,
   getAllAdhesions,
@@ -15,6 +19,7 @@ import {
   uploadAffiche,
   getDashboardStats,
 } from "./lib/api.js";
+import { supabase } from "./lib/supabase.js";
 
 // LOGO injecté au build
 const LOGO_B64 = "data:image/jpeg;base64,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";
@@ -219,7 +224,7 @@ function PageIntro({onEnter,inscrits,setInscrits,adhesions,setAdhesions}){
         </div>
 
         {vue==="choix"&&<VueChoix onJoueur={()=>setVue("joueur")} onOrga={()=>setVue("organisateur")} onConnexionOrga={()=>setVue("connexion_orga")}/>}
-        {vue==="joueur"&&<VueJoueur onBack={()=>setVue("choix")} inscrits={inscrits} setInscrits={setInscrits} onEnter={onEnter}/>}
+        {vue==="joueur"&&<VueJoueur onBack={()=>setVue("choix")} onEnter={onEnter}/>}
         {vue==="organisateur"&&<VueOrganisateur onBack={()=>setVue("choix")} adhesions={adhesions} setAdhesions={setAdhesions} onDone={()=>setVue("confirm_org")}/>}
         {vue==="connexion_orga"&&<VueConnexionOrga onBack={()=>setVue("choix")} adhesions={adhesions} onEnter={onEnter}/>}
         {vue==="confirm_org"&&(
@@ -329,39 +334,54 @@ function VueConnexionOrga({onBack,adhesions,onEnter}){
   </>);
 }
 
-function VueJoueur({onBack,inscrits,setInscrits,onEnter}){
+function VueJoueur({onBack,onEnter}){
+  const [mode,setMode]=useState("choix"); // choix | login | signup
   const [prenom,setPrenom]=useState("");
   const [nom,setNom]=useState("");
   const [email,setEmail]=useState("");
   const [ville,setVille]=useState("");
+  const [mdp,setMdp]=useState("");
+  const [mdp2,setMdp2]=useState("");
+  const [showMdp,setShowMdp]=useState(false);
   const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
   const [welName,setWelName]=useState("");
   const [welcome,setWelcome]=useState(false);
 
-  async function connect(){
-    if(!prenom.trim()||!nom.trim()||!email.trim()||!email.includes("@")){setErr("Merci de remplir tous les champs obligatoires.");return;}
-    setErr("");
+  function reset(){setErr("");setMdp("");setMdp2("");}
+
+  async function handleSignup(){
+    if(!prenom.trim()||!nom.trim()||!email.trim()||!email.includes("@")){setErr("Remplis tous les champs obligatoires.");return;}
+    if(!mdp||mdp.length<6){setErr("Mot de passe : 6 caractères minimum.");return;}
+    if(mdp!==mdp2){setErr("Les mots de passe ne correspondent pas.");return;}
+    setErr(""); setLoading(true);
     try {
-      // Cherche si le joueur existe déjà
-      const ex = await getJoueurByEmail(email);
-      if(ex){
-        setWelName(ex.prenom); setWelcome(true);
-        setTimeout(()=>onEnter({...ex, role:"joueur", reconnexion:true}), 1600);
-      } else {
-        const n = await createJoueur({prenom, nom, email, ville});
-        setInscrits(prev=>[...prev,{...n, role:"joueur"}]);
-        onEnter({...n, role:"joueur"});
-      }
-    } catch(e) {
-      setErr("Erreur de connexion. Réessayez.");
-      console.error(e);
-    }
+      const res = await signUpJoueur({prenom, nom, email, ville, password: mdp});
+      onEnter({...res, role:"joueur"});
+    } catch(e){
+      if(e.message?.includes("already registered")) setErr("Cet email est déjà utilisé. Connecte-toi.");
+      else setErr(e.message||"Erreur lors de l'inscription.");
+    } finally { setLoading(false); }
+  }
+
+  async function handleLogin(){
+    if(!email.trim()||!mdp){setErr("Email et mot de passe requis.");return;}
+    setErr(""); setLoading(true);
+    try {
+      const res = await signInJoueur(email, mdp);
+      setWelName(res.profil?.prenom||email);
+      setWelcome(true);
+      setTimeout(()=>onEnter({...res.profil, role:"joueur"}), 1500);
+    } catch(e){
+      if(e.message?.includes("Invalid login")) setErr("Email ou mot de passe incorrect.");
+      else setErr(e.message||"Erreur de connexion.");
+    } finally { setLoading(false); }
   }
 
   if(welcome) return(
     <div style={{textAlign:"center",padding:"16px 0"}}>
       <div style={{fontSize:44,marginBottom:14}}>👋</div>
-      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Content de vous revoir,</div>
+      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Content de te revoir,</div>
       <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{welName}</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
         <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
@@ -370,19 +390,70 @@ function VueJoueur({onBack,inscrits,setInscrits,onEnter}){
     </div>
   );
 
-  return(<>
+  // ── Choix signup / login ──
+  if(mode==="choix") return(<>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
-    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Connexion joueur 🏐</div>
-    <div style={{fontSize:13,color:"var(--t3)",marginBottom:20,lineHeight:1.6}}>Entrez vos informations pour accéder au site.</div>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Espace joueur 🏐</div>
+    <div style={{fontSize:13,color:"var(--t3)",marginBottom:24,lineHeight:1.6}}>Tu as déjà un compte ou c'est ta première visite ?</div>
+    <button onClick={()=>{reset();setMode("login");}} className="btn btn-w btn-lg" style={{width:"100%",marginBottom:10}}>Se connecter →</button>
+    <button onClick={()=>{reset();setMode("signup");}} className="btn btn-ghost btn-lg" style={{width:"100%"}}>Créer un compte</button>
+  </>);
+
+  // ── Login ──
+  if(mode==="login") return(<>
+    <button onClick={()=>{reset();setMode("choix");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:20}}>Connexion 🏐</div>
+    {err&&<div className="err-box">{err}</div>}
+    <div style={{marginBottom:10}}><label className="lbl">Email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:8,position:"relative"}}>
+      <label className="lbl">Mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&handleLogin()} className="field" style={{paddingRight:44}}/>
+        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0}}>{showMdp?"🙈":"👁️"}</button>
+      </div>
+    </div>
+    <div style={{marginBottom:22,textAlign:"right"}}>
+      <span style={{fontSize:12,color:"var(--blue)",cursor:"pointer"}} onClick={()=>{reset();setMode("signup");}}>Pas encore de compte ? S'inscrire</span>
+    </div>
+    <button onClick={handleLogin} disabled={loading} className="btn btn-w btn-lg" style={{width:"100%"}}>{loading?"Connexion...":"Se connecter →"}</button>
+  </>);
+
+  // ── Signup ──
+  const mdpForce=mdp.length===0?0:mdp.length<6?1:mdp.length<10?2:3;
+  return(<>
+    <button onClick={()=>{reset();setMode("choix");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:20}}>Créer un compte 🏐</div>
     {err&&<div className="err-box">{err}</div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
       <div><label className="lbl">Prénom *</label><input type="text" value={prenom} onChange={e=>{setPrenom(e.target.value);setErr("");}} placeholder="Jean-Paul" className="field"/></div>
       <div><label className="lbl">Nom *</label><input type="text" value={nom} onChange={e=>{setNom(e.target.value);setErr("");}} placeholder="Dupont" className="field"/></div>
     </div>
-    <div style={{marginBottom:10}}><label className="lbl">Adresse email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&connect()} className="field" style={{fontSize:16}}/></div>
-    <div style={{marginBottom:22}}><label className="lbl">Ville</label><input type="text" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Saint-Denis, Saint-Pierre..." className="field"/></div>
-    <button onClick={connect} className="btn btn-w btn-lg" style={{width:"100%"}}>Accéder au site →</button>
-    <p style={{fontSize:11,color:"var(--t4)",textAlign:"center",marginTop:12}}>Gratuit · Accès immédiat · Données confidentielles</p>
+    <div style={{marginBottom:10}}><label className="lbl">Email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:10}}><label className="lbl">Ville</label><input type="text" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Saint-Denis, Saint-Pierre..." className="field"/></div>
+    <div style={{marginBottom:10}}>
+      <label className="lbl">Mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="Minimum 6 caractères" className="field" style={{paddingRight:44}}/>
+        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0}}>{showMdp?"🙈":"👁️"}</button>
+      </div>
+      {mdp.length>0&&(
+        <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,height:3,borderRadius:2,background:"var(--b2)",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${[0,33,66,100][mdpForce]}%`,background:["transparent","var(--red)","var(--yellow)","var(--green)"][mdpForce],transition:"all 0.3s",borderRadius:2}}/>
+          </div>
+          <span style={{fontSize:11,color:["transparent","var(--red)","var(--yellow)","var(--green)"][mdpForce],fontWeight:600,minWidth:40}}>{["","Trop court","Correct","Fort"][mdpForce]}</span>
+        </div>
+      )}
+    </div>
+    <div style={{marginBottom:22}}>
+      <label className="lbl">Confirmer le mot de passe *</label>
+      <input type="password" value={mdp2} onChange={e=>{setMdp2(e.target.value);setErr("");}} placeholder="Répète ton mot de passe" onKeyDown={e=>e.key==="Enter"&&handleSignup()} className="field" style={{borderColor:mdp2&&mdp2!==mdp?"var(--red)":mdp2&&mdp2===mdp?"var(--green)":""}}/>
+      {mdp2&&<div style={{marginTop:5,fontSize:11,fontWeight:600,color:mdp2===mdp?"var(--green)":"var(--red)"}}>{mdp2===mdp?"✓ Identiques":"✕ Ne correspond pas"}</div>}
+    </div>
+    <button onClick={handleSignup} disabled={loading} className="btn btn-w btn-lg" style={{width:"100%"}}>{loading?"Création...":"Créer mon compte →"}</button>
+    <div style={{marginTop:12,textAlign:"center"}}>
+      <span style={{fontSize:12,color:"var(--blue)",cursor:"pointer"}} onClick={()=>{reset();setMode("login");}}>Déjà un compte ? Se connecter</span>
+    </div>
   </>);
 }
 
@@ -1234,44 +1305,84 @@ function clamp(min,max){return `clamp(${min}px, 4vw, ${max}px)`;}
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App(){
   const [showSplash,setShowSplash]=useState(true);
-  const [page,setPage]=useState("home"); // home | carte | login | admin | partenaires
+  const [page,setPage]=useState("home");
   const [accesOK,setAccesOK]=useState(false);
   const [currentUser,setCurrentUser]=useState(null);
+  const [authChecked,setAuthChecked]=useState(false); // session vérifiée ?
   const [inscrits,setInscrits]=useState([]);
   const [sponsors,setSponsors]=useState(INIT_SP);
   const [tournois,setTournois]=useState([]);
   const [showInscription,setShowInscription]=useState(false);
   const [adhesions,setAdhesions]=useState([]);
   const [showPopup,setShowPopup]=useState(false);
-  const [loading,setLoading]=useState(true);
 
-  // ── Chargement initial depuis Supabase ──
+  // ── Session persistante + chargement initial ──────────────────────────────
   useEffect(()=>{
-    async function init(){
-      try {
-        const [ts, js] = await Promise.all([
-          getAllTournois(),
-          getAllJoueurs(),
-        ]);
-        setTournois(ts);
-        setInscrits(js);
-      } catch(e){
-        // Supabase non configuré ou erreur réseau → on continue sans données
-        console.warn("Chargement Supabase ignoré :", e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    init();
     if(window.location.hash==="#partenaires") setPage("partenaires");
+
+    // Charge les tournois publics (pas besoin d'être connecté)
+    getAllTournois().then(ts=>setTournois(ts)).catch(()=>{});
+
+    // Écoute les changements de session Auth (connexion / déconnexion / reload)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session)=>{
+      if(session?.user){
+        // Utilisateur connecté → récupère son profil
+        const email = session.user.email;
+        const meta  = session.user.user_metadata || {};
+        const role  = meta.role || "joueur";
+
+        if(role === "organisateur"){
+          try {
+            const orga = await getOrganisateurByEmail(email);
+            if(orga){ setCurrentUser({...orga, role:"organisateur"}); setAccesOK(true); }
+          } catch(e){ console.warn("Profil organisateur non trouvé", e); }
+        } else {
+          try {
+            let profil = await getJoueurByEmail(email);
+            if(!profil){
+              // Crée le profil s'il n'existe pas encore (cas signUp sans createJoueur)
+              profil = await createJoueur({ prenom: meta.prenom||"", nom: meta.nom||"", email, ville: meta.ville||"" });
+            }
+            setCurrentUser({...profil, role:"joueur"});
+            setAccesOK(true);
+          } catch(e){ console.warn("Profil joueur non trouvé", e); }
+        }
+      } else {
+        // Pas de session → écran d'accueil
+        setCurrentUser(null);
+        setAccesOK(false);
+      }
+      setAuthChecked(true);
+    });
+
+    return () => subscription.unsubscribe();
   },[]);
 
-  function handleIntro(v){setCurrentUser(v);setAccesOK(true);}
+  // Chargement liste joueurs pour l'admin (séparé)
+  async function loadInscrits(){ getAllJoueurs().then(js=>setInscrits(js)).catch(()=>{}); }
+
+  function handleIntro(v){ setCurrentUser(v); setAccesOK(true); }
+
+  async function handleLogout(){
+    await signOut();
+    setCurrentUser(null);
+    setAccesOK(false);
+  }
+
+  // Attend que la session soit vérifiée avant d'afficher l'UI
+  if(!authChecked && !showSplash) return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
+      <style>{CSS}</style>
+      <div style={{display:"flex",gap:7}}>
+        {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"var(--t3)",animation:`splDot 1.3s ease-in-out ${i*0.14}s infinite`}}/>)}
+      </div>
+    </div>
+  );
 
   if(showSplash) return <SplashScreen onDone={()=>setShowSplash(false)}/>;
   if(page==="partenaires") return <PagePartenaires onBack={()=>setPage("home")} tournois={tournois} inscrits={inscrits}/>;
   if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")}/>;
-  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>setPage("home")}/>;
+  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>{loadInscrits();setPage("home");}}/>;
   if(!accesOK) return <PageIntro onEnter={handleIntro} inscrits={inscrits} setInscrits={setInscrits} adhesions={adhesions} setAdhesions={setAdhesions}/>;
 
   return(
@@ -1321,6 +1432,7 @@ export default function App(){
               <button style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"6px 14px",borderRadius:980,fontFamily:"inherit",letterSpacing:-0.1,transition:"all 0.15s"}} onClick={()=>setPage("login")}
                 onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,0,0,0.08)";e.currentTarget.style.color="var(--t1)";}}
                 onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,0.04)";e.currentTarget.style.color="var(--t2)";}}>Admin</button>
+              {accesOK&&<button onClick={handleLogout} style={{background:"none",border:"none",color:"var(--t4)",fontSize:12,cursor:"pointer",padding:"5px 10px",borderRadius:980,fontFamily:"inherit",transition:"color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.color="var(--red)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>Déconnexion</button>}
             </div>
           </div>
         </nav>

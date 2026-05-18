@@ -10,12 +10,13 @@ create extension if not exists "uuid-ossp";
 
 -- ─── TABLE : joueurs ────────────────────────────────────────────────────────
 create table if not exists joueurs (
-  id         uuid primary key default uuid_generate_v4(),
-  prenom     text not null,
-  nom        text not null,
-  email      text not null unique,
-  ville      text not null default '',
-  created_at timestamptz not null default now()
+  id           uuid primary key default uuid_generate_v4(),
+  auth_user_id uuid references auth.users (id) on delete cascade,
+  prenom       text not null,
+  nom          text not null,
+  email        text not null unique,
+  ville        text not null default '',
+  created_at   timestamptz not null default now()
 );
 
 create index if not exists joueurs_email_idx on joueurs (email);

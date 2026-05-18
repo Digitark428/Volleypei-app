@@ -1,4 +1,20 @@
 import { useState, useEffect } from "react";
+import {
+  getJoueurByEmail,
+  createJoueur,
+  getAllJoueurs,
+  signInOrganisateur,
+  getOrganisateurByEmail,
+  soumettreDemande,
+  getAllAdhesions,
+  validerAdhesion,
+  refuserAdhesion,
+  getAllTournois,
+  createTournoi,
+  deleteTournoi,
+  uploadAffiche,
+  getDashboardStats,
+} from "./lib/api.js";
 
 // LOGO injecté au build
 const LOGO_B64 = "data:image/jpeg;base64,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";
@@ -10,18 +26,19 @@ const TTYPES = ["Beach Volley","Green Volley","Volley Indoor","Mixte","Loisir"];
 
 const INIT_SP = Array.from({length:6},(_,i)=>({id:i+1,slot:"Emplacement "+(i+1),nom:"",texte:"",image:null,actif:false,siteWeb:"",instagram:"",facebook:"",whatsapp:""}));
 
-const TOURNOIS_INIT = [
-  {id:1,nom:"Open Beach de Saint-Gilles",date:"2026-05-25",lieu:"Plage de Boucan Canot",ville:"Saint-Gilles",lat:-21.0534,lng:55.2282,heure:"09:00",type:"Beach Volley",joueurs:16,contact:"Kevin J. — 0692 12 34 56",organisateur:"Beach Volley Réunion",description:"Tournoi open niveau régional.",affiche:null},
-  {id:2,nom:"Indoor Cup Saint-Denis",date:"2026-06-07",lieu:"Gymnase Jean Albany",ville:"Saint-Denis",lat:-20.8789,lng:55.4481,heure:"08:00",type:"Volley Indoor",joueurs:12,contact:"Marie L. — 0692 98 76 54",organisateur:"VBC Saint-Denis",description:"Coupe des clubs du nord.",affiche:null},
-  {id:3,nom:"Trophée Côte Ouest",date:"2026-06-21",lieu:"Salle Omnisports",ville:"Saint-Paul",lat:-21.0051,lng:55.2715,heure:"10:00",type:"Mixte",joueurs:8,contact:"Robert C. — 0692 55 44 33",organisateur:"Pitch 974",description:"Format mixte, ambiance garantie.",affiche:null},
-  {id:4,nom:"Summer Beach Open",date:"2026-07-12",lieu:"Plage de l'Hermitage",ville:"Saint-Paul",lat:-21.0212,lng:55.2189,heure:"08:30",type:"Beach Volley",joueurs:32,contact:"Sylvie R. — 0692 77 88 99",organisateur:"Beach Club Ouest",description:"Le plus grand tournoi de l'été !",affiche:null},
-  {id:5,nom:"Green Volley Cup Cilaos",date:"2026-07-12",lieu:"Terrain en herbe",ville:"Cilaos",lat:-21.1380,lng:55.4760,heure:"09:00",type:"Green Volley",joueurs:8,contact:"Marc D. — 0692 11 22 33",organisateur:"Volley des Hauts",description:"Dans le magnifique cirque de Cilaos.",affiche:null},
-];
+// ── SITE VIERGE — chaque utilisateur démarre à zéro ──
+// Les tournois sont créés via "Publier un tournoi" (organisateurs)
+// Les partenaires sont activés via le panneau Admin
+const TOURNOIS_INIT = [];
 
+// Sponsors fictifs utilisés UNIQUEMENT sur la page Partenaires (aperçu démo)
 const FAKE_SPONSORS = [
-  {id:1,nom:"Decathlon Réunion",texte:"Équipez-vous pour jouer",emoji:"🏪",color:"#0082C3",bg:"rgba(0,130,195,0.08)"},
-  {id:2,nom:"Red Bull",texte:"Donne des ailes",emoji:"🐂",color:"#CC1E1E",bg:"rgba(204,30,30,0.08)"},
-  {id:3,nom:"Beach Store 974",texte:"La boutique du beach",emoji:"🏖️",color:"#F59E0B",bg:"rgba(245,158,11,0.08)"},
+  {id:1,nom:"Decathlon Réunion",texte:"Partenaire équipement officiel",emoji:"🏪",color:"#0082C3",bg:"rgba(0,130,195,0.08)"},
+  {id:2,nom:"Red Bull",texte:"Donne des ailes au volley",emoji:"🐂",color:"#CC1E1E",bg:"rgba(204,30,30,0.08)"},
+  {id:3,nom:"Beach Store 974",texte:"La boutique du beach volley",emoji:"🏖️",color:"#F59E0B",bg:"rgba(245,158,11,0.08)"},
+  {id:4,nom:"Rhum Charrette",texte:"Tradition péi",emoji:"🥃",color:"#a16207",bg:"rgba(161,98,7,0.08)"},
+  {id:5,nom:"Réunion Tourisme",texte:"L'île intense",emoji:"🌋",color:"#10b981",bg:"rgba(16,185,129,0.08)"},
+  {id:6,nom:"Royal Bourbon",texte:"Spécialités locales",emoji:"☕",color:"#7c2d12",bg:"rgba(124,45,18,0.08)"},
 ];
 
 function gj(a,m){const p=new Date(a,m,1),d=new Date(a,m+1,0),j=[];for(let i=0;i<p.getDay();i++)j.push(null);for(let x=1;x<=d.getDate();x++)j.push(x);return j;}
@@ -31,100 +48,118 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
-  --bg:#000;--s1:#0a0a0a;--s2:#111;--s3:#161616;--s4:#1c1c1e;
-  --b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.11);--b3:rgba(255,255,255,0.2);
-  --t1:#f5f5f7;--t2:#a1a1a6;--t3:#6e6e73;--t4:#3a3a3c;
-  --blue:#0071e3;--blue2:#2997ff;--green:#30d158;--red:#ff453a;--yellow:#ffd60a;
+  /* THÈME CLAIR APPLE-STYLE */
+  --bg:#fbfbfd;--s1:#ffffff;--s2:#f5f5f7;--s3:#f5f5f7;--s4:#ffffff;
+  --b1:rgba(0,0,0,0.06);--b2:rgba(0,0,0,0.1);--b3:rgba(0,0,0,0.15);
+  --t1:#1d1d1f;--t2:#424245;--t3:#6e6e73;--t4:#86868b;
+  --blue:#0066cc;--blue2:#0071e3;--green:#30a653;--red:#e30000;--yellow:#f59e0b;
   --re-b:#2563eb;--re-y:#fbbf24;--re-r:#dc2626;
-  --ease:cubic-bezier(0.22,1,0.36,1);
+  --ease:cubic-bezier(0.28,0.11,0.32,1);
 }
-html,body{background:var(--bg);font-family:'Inter',-apple-system,sans-serif;color:var(--t1);-webkit-font-smoothing:antialiased;line-height:1;}
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#222;border-radius:2px;}
-.field{width:100%;background:var(--s4);border:1px solid var(--b2);border-radius:12px;padding:14px 16px;color:var(--t1);font-family:inherit;font-size:15px;outline:none;transition:border-color 0.2s;}
-.field:focus{border-color:var(--blue2);}
-.field::placeholder{color:var(--t3);}
-.lbl{display:block;font-size:11px;font-weight:600;color:var(--t3);margin-bottom:6px;letter-spacing:0.8px;text-transform:uppercase;}
-.btn{border:none;border-radius:980px;padding:11px 22px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.18s var(--ease);white-space:nowrap;}
-.btn-w{background:white;color:#000;}.btn-w:hover{background:#e5e5e5;transform:scale(1.02);}
-.btn-ghost{background:rgba(255,255,255,0.07);color:var(--t1);border:1px solid var(--b2);}.btn-ghost:hover{background:rgba(255,255,255,0.11);}
-.btn-sm{padding:7px 14px;font-size:12px;}
-.btn-lg{padding:15px 32px;font-size:16px;font-weight:600;}
-.tag{display:inline-flex;align-items:center;background:rgba(255,255,255,0.06);color:var(--t2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;border:1px solid var(--b1);}
-.tag-b{background:rgba(41,151,255,0.12);color:var(--blue2);border-color:rgba(41,151,255,0.2);}
-.tag-g{background:rgba(48,209,88,0.12);color:var(--green);border-color:rgba(48,209,88,0.2);}
-.tag-y{background:rgba(251,191,36,0.12);color:var(--re-y);border-color:rgba(251,191,36,0.2);}
-.err-box{background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.25);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px;}
-.info-box{background:rgba(41,151,255,0.08);border-left:3px solid var(--blue);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--blue2);margin-bottom:16px;}
-.warn-box{background:rgba(255,214,10,0.07);border:1px solid rgba(255,214,10,0.2);border-radius:12px;padding:16px;margin-bottom:16px;}
+html,body{background:var(--bg);font-family:'SF Pro Display','SF Pro Text','Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;color:var(--t1);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;line-height:1.2;}
+::-webkit-scrollbar{width:0;}
+.field{width:100%;background:#ffffff;border:1px solid #d2d2d7;border-radius:12px;padding:13px 16px;color:var(--t1);font-family:inherit;font-size:15px;outline:none;transition:all 0.2s;-webkit-appearance:none;}
+.field:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,102,204,0.15);}
+.field::placeholder{color:var(--t4);}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--t3);margin-bottom:7px;letter-spacing:0.8px;text-transform:uppercase;}
+.btn{border:none;border-radius:980px;padding:11px 22px;font-family:inherit;font-size:14px;font-weight:400;cursor:pointer;transition:all 0.18s var(--ease);white-space:nowrap;letter-spacing:-0.01em;}
+.btn-w{background:var(--blue);color:white;}.btn-w:hover{background:#0056b3;}
+.btn-ghost{background:rgba(0,0,0,0.04);color:var(--t1);border:none;}.btn-ghost:hover{background:rgba(0,0,0,0.08);}
+.btn-sm{padding:7px 16px;font-size:12px;}
+.btn-lg{padding:14px 32px;font-size:16px;font-weight:500;}
+.tag{display:inline-flex;align-items:center;background:rgba(0,0,0,0.05);color:var(--t2);border-radius:980px;padding:3px 11px;font-size:11px;font-weight:500;letter-spacing:-0.005em;}
+.tag-b{background:rgba(0,102,204,0.1);color:var(--blue);}
+.tag-g{background:rgba(48,166,83,0.12);color:var(--green);}
+.tag-y{background:rgba(245,158,11,0.14);color:#b45309;}
+.err-box{background:#fff3f3;border:1px solid #ffcdd2;border-radius:10px;padding:10px 14px;font-size:13px;color:#c62828;margin-bottom:16px;}
+.info-box{background:rgba(0,102,204,0.06);border-left:3px solid var(--blue);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--blue);margin-bottom:16px;}
+.warn-box{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:16px;margin-bottom:16px;}
 /* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;height:52px;background:rgba(0,0,0,0.82);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--b1);}
-.nav-in{max-width:1060px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px;}
-.nav-tabs{display:flex;gap:2px;background:var(--s4);border-radius:10px;padding:3px;}
-.nav-tab{background:none;border:none;color:var(--t3);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;padding:5px 13px;border-radius:7px;transition:all 0.15s;white-space:nowrap;}
-.nav-tab.on{background:var(--s2);color:var(--t1);}
-@media(max-width:600px){.nav-in{padding:0 12px;}.nav-tab{padding:5px 9px;font-size:11px;}.nl{display:none;}}
-.page{padding-top:52px;min-height:100vh;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;height:48px;background:rgba(251,251,253,0.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,0.06);}
+.nav-in{max-width:1024px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:12px;}
+.nav-tabs{display:flex;gap:0;}
+.nav-tab{background:none;border:none;color:var(--t3);font-family:inherit;font-size:12px;font-weight:400;cursor:pointer;padding:5px 12px;border-radius:0;transition:color 0.2s;white-space:nowrap;letter-spacing:-0.01em;}
+.nav-tab:hover{color:var(--t1);}
+.nav-tab.on{color:var(--t1);}
+@media(max-width:600px){.nav-in{padding:0 16px;}.nav-tab{padding:5px 9px;font-size:11px;}.nl{display:none;}}
+.page{padding-top:48px;min-height:100vh;}
 /* OVERLAY */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;animation:fi 0.18s ease;}
-.modal{background:var(--s1);border:1px solid var(--b2);border-radius:24px;padding:30px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;animation:su 0.28s var(--ease);}
-@media(max-width:600px){.modal{padding:22px 18px;border-radius:20px;max-width:100%;margin:0 0 0 0;}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;animation:fi 0.18s ease;}
+.modal{background:#ffffff;border:none;border-radius:18px;padding:32px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;animation:su 0.28s var(--ease);box-shadow:0 30px 60px rgba(0,0,0,0.2);}
+@media(max-width:600px){.modal{padding:24px 20px;border-radius:18px;max-width:100%;}}
 /* CALENDRIER */
-.cal-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;margin-bottom:32px;}
-.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
-.cal-month{font-size:14px;font-weight:700;letter-spacing:-0.2px;}
-.cal-arrow{background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all 0.15s;}
-.cal-arrow:hover{background:var(--s4);color:var(--t1);}
-.cal-dh{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--b1);}
-.cal-dn{text-align:center;padding:7px 0;font-size:9px;font-weight:600;color:var(--t4);letter-spacing:0.5px;text-transform:uppercase;}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
-.cal-cell{min-height:46px;padding:5px 3px;border-right:1px solid rgba(255,255,255,0.025);border-bottom:1px solid rgba(255,255,255,0.025);cursor:pointer;transition:background 0.1s;position:relative;}
-.cal-cell:hover{background:rgba(255,255,255,0.02);}
-.cal-cell.sel{background:rgba(0,113,227,0.1);}
-.cal-num{font-size:11px;color:var(--t3);width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
-.cal-num.td{background:var(--blue);color:white;font-weight:700;}
-.cal-dot{width:4px;height:4px;border-radius:50%;background:var(--blue2);display:inline-block;margin:0 1px;}
-@media(max-width:600px){.cal-cell{min-height:38px;}.cal-num{font-size:10px;width:20px;height:20px;}.cal-dn{font-size:8px;}}
-/* TOURNOI CARDS */
-.t-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.22s var(--ease);}
-.t-card:hover{border-color:var(--b2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.5);}
-.t-card-cover{width:100%;height:130px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:40px;object-fit:cover;}
-.t-card-body{padding:15px 17px 18px;}
-.t-card-name{font-size:15px;font-weight:700;letter-spacing:-0.3px;margin-bottom:10px;line-height:1.3;}
+.cal-wrap{background:#ffffff;border:none;border-radius:18px;overflow:hidden;margin-bottom:24px;padding:24px 16px 18px;}
+.cal-nav{display:flex;align-items:center;justify-content:center;gap:14px;padding:0 0 16px;}
+.cal-month{font-size:15px;font-weight:600;letter-spacing:-0.3px;min-width:120px;text-align:center;color:var(--t1);font-variant-numeric:tabular-nums;}
+.cal-arrow{background:rgba(0,0,0,0.04);border:none;color:var(--t1);font-size:16px;cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background 0.15s;}
+.cal-arrow:hover{background:rgba(0,0,0,0.08);}
+.cal-dh{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px;}
+.cal-dn{text-align:center;padding:6px 0;font-size:11px;font-weight:600;color:var(--t4);letter-spacing:0.5px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-cell{aspect-ratio:1/1;padding:0;cursor:pointer;transition:background 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:7px;border-radius:8px;border:none;position:relative;}
+.cal-cell:hover{background:#f5f5f7;}
+.cal-cell.sel{background:var(--blue);color:white;}
+.cal-num{font-size:14px;color:var(--t1);width:auto;height:auto;display:flex;align-items:center;justify-content:center;border-radius:0;font-weight:400;font-variant-numeric:tabular-nums;line-height:1;}
+.cal-num.td{background:transparent;color:var(--blue);font-weight:600;}
+.cal-cell.sel .cal-num{color:white;}
+.cal-cell.sel .cal-num.td{color:white;}
+.cal-dot{width:4px;height:4px;border-radius:50%;background:var(--blue);display:inline-block;margin:0 1px;}
+.cal-cell.sel .cal-dot{background:white;}
+@media(max-width:600px){.cal-num{font-size:13px;}.cal-dn{font-size:10px;}}
+/* TOURNOI CARDS - style produit Apple */
+.t-card{background:#f5f5f7;border:none;border-radius:18px;overflow:hidden;cursor:pointer;transition:all 0.4s var(--ease);position:relative;}
+.t-card:hover{transform:translateY(-4px);box-shadow:0 24px 48px rgba(0,0,0,0.08);}
+.t-card-cover{width:100%;height:160px;background:linear-gradient(180deg,#e5e7eb,#d1d5db);display:flex;align-items:center;justify-content:center;font-size:64px;object-fit:cover;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.08));}
+.t-card-body{padding:22px 22px 24px;}
+.t-card-name{font-size:20px;font-weight:600;letter-spacing:-0.3px;margin-bottom:8px;line-height:1.15;color:var(--t1);}
 .t-card-meta{display:flex;flex-direction:column;gap:5px;}
-.t-meta-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2);}
-.t-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;animation:fadeSlide 0.3s var(--ease);}
+.t-meta-row{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--t2);}
+.t-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;animation:fadeSlide 0.3s var(--ease);}
 @media(max-width:600px){.t-cards-grid{grid-template-columns:1fr;}}
 /* MAP */
-.map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--b1);height:460px;}
+.map-wrap{border-radius:18px;overflow:hidden;border:none;height:460px;}
 @media(max-width:600px){.map-wrap{height:300px;}}
 /* INTRO / LOGIN */
 .intro-page{min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden;position:relative;}
-.intro-card{background:var(--s1);border:1px solid var(--b2);border-radius:26px;padding:36px 32px;width:100%;max-width:390px;position:relative;}
-@media(max-width:480px){.intro-card{padding:26px 20px;border-radius:20px;}}
+.intro-card{background:#ffffff;border:none;border-radius:20px;padding:40px 32px;width:100%;max-width:400px;position:relative;box-shadow:0 1px 0 rgba(0,0,0,0.04),0 20px 40px rgba(0,0,0,0.06);}
+@media(max-width:480px){.intro-card{padding:32px 24px;border-radius:18px;}}
 /* ADMIN */
-.adm-page{min-height:100vh;background:var(--bg);padding-top:52px;}
+.adm-page{min-height:100vh;background:var(--bg);padding-top:48px;}
 .adm-tab{background:none;border:none;border-bottom:2px solid transparent;padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;font-family:inherit;transition:all 0.15s;}
-.adm-tab.on{border-bottom-color:var(--blue2);color:var(--t1);}
-.adm-badge{background:var(--s4);color:var(--t3);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px;}
+.adm-tab.on{border-bottom-color:var(--blue);color:var(--t1);}
+.adm-badge{background:rgba(0,0,0,0.06);color:var(--t3);border-radius:980px;padding:1px 8px;font-size:10px;margin-left:4px;font-weight:500;}
 .adm-badge.on{background:var(--blue);color:white;}
-.adm-wrap{max-width:840px;margin:0 auto;padding:24px 16px;}
-.sp-slot{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:18px;margin-bottom:10px;}
-.sp-prev{width:68px;height:68px;border-radius:10px;background:var(--s3);border:1px solid var(--b1);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.adm-wrap{max-width:880px;margin:0 auto;padding:28px 22px;}
+.sp-slot{background:#ffffff;border:none;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,0.04);}
+.sp-prev{width:68px;height:68px;border-radius:12px;background:#f5f5f7;border:none;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
 .sp-prev img{width:100%;height:100%;object-fit:cover;}
-.upzone{display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--s3);border:1.5px dashed var(--b2);border-radius:10px;padding:14px;cursor:pointer;transition:all 0.18s;text-align:center;}
-.upzone:hover{border-color:var(--blue2);background:rgba(0,113,227,0.05);}
-.tbl-head{display:grid;grid-template-columns:1fr 2fr 1fr 1.5fr;background:var(--s2);padding:9px 16px;border-radius:12px 12px 0 0;border-bottom:1px solid var(--b1);}
-.tbl-row{display:grid;grid-template-columns:1fr 2fr 1fr 1.5fr;padding:12px 16px;border-bottom:1px solid var(--b1);transition:background 0.1s;}
-.tbl-row:last-child{border-bottom:none;}
-.tbl-row:hover{background:rgba(255,255,255,0.02);}
+.upzone{display:flex;flex-direction:column;align-items:center;gap:5px;background:#f5f5f7;border:1.5px dashed #c7c7cc;border-radius:12px;padding:16px;cursor:pointer;transition:all 0.18s;text-align:center;}
+.upzone:hover{border-color:var(--blue);background:rgba(0,102,204,0.04);}
+.tbl-head{display:grid;grid-template-columns:1fr 2fr 1fr 1.5fr;background:#f5f5f7;padding:10px 18px;border-radius:14px 14px 0 0;border-bottom:none;font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.5px;}
+.tbl-row{display:grid;grid-template-columns:1fr 2fr 1fr 1.5fr;padding:14px 18px;border-bottom:1px solid var(--b1);transition:background 0.1s;background:#ffffff;}
+.tbl-row:last-child{border-bottom:none;border-radius:0 0 14px 14px;}
+.tbl-row:hover{background:#f9f9fb;}
 @media(max-width:640px){.tbl-head,.tbl-row{grid-template-columns:1fr 2fr 1.2fr;}.hc{display:none;}}
 /* PARTENAIRES PAGE */
-.part-page{min-height:100vh;background:var(--bg);padding-top:52px;}
+.part-page{min-height:100vh;background:var(--bg);padding-top:48px;}
 .part-hero{text-align:center;padding:60px 24px 40px;position:relative;}
-.part-hero::before{content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(37,99,235,0.08) 0%,transparent 70%);pointer-events:none;}
-.strip{height:2px;background:linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%);opacity:0.6;}
+.part-hero::before{content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,204,0.06) 0%,transparent 70%);pointer-events:none;}
+.strip{height:3px;background:linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%);opacity:1;}
 /* ROLE CARDS */
-.role-card{background:var(--s3);border:1px solid var(--b2);border-radius:14px;padding:17px;cursor:pointer;transition:all 0.2s var(--ease);display:flex;align-items:center;gap:14px;}
+.role-card{background:#f5f5f7;border:none;border-radius:16px;padding:20px;cursor:pointer;transition:all 0.2s var(--ease);display:flex;align-items:center;gap:14px;}
+.role-card:hover{background:#ececef;transform:translateY(-2px);}
+/* HERO style Apple */
+.hero-title{font-size:clamp(34px,6vw,64px);line-height:1.05;letter-spacing:-0.015em;font-weight:600;color:var(--t1);}
+.hero-sub{font-size:clamp(17px,2vw,21px);line-height:1.2;letter-spacing:0.004em;font-weight:400;color:var(--t3);margin-top:8px;}
+.section-title{font-size:clamp(28px,4.5vw,44px);line-height:1.08;letter-spacing:-0.005em;font-weight:600;}
+.link{color:var(--blue);text-decoration:none;font-size:17px;line-height:1.23;letter-spacing:-0.022em;font-weight:400;cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:color 0.2s;background:none;border:none;font-family:inherit;}
+.link:hover{text-decoration:underline;}
+.link::after{content:'›';font-size:1.2em;transition:transform 0.2s;}
+.link:hover::after{transform:translateX(2px);}
+.link-sm{font-size:14px;}
+/* CLOSE BUTTON modal */
+.close-btn{background:rgba(0,0,0,0.05);border:none;color:var(--t1);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s;font-family:inherit;}
+.close-btn:hover{background:rgba(0,0,0,0.1);}
 /* ANIMATIONS */
 @keyframes fi{from{opacity:0}to{opacity:1}}
 @keyframes su{from{opacity:0;transform:translateY(18px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -133,7 +168,8 @@ html,body{background:var(--bg);font-family:'Inter',-apple-system,sans-serif;colo
 @keyframes splDot{0%,80%,100%{transform:scale(0.4);opacity:0.25}40%{transform:scale(1);opacity:1}}
 @keyframes splFlare{0%{transform:translateX(-120%) skewX(-14deg);opacity:0}20%{opacity:0.55}70%{transform:translateX(320%) skewX(-14deg);opacity:0.55}100%{opacity:0}}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(48,209,88,0.3)}50%{box-shadow:0 0 0 5px rgba(48,209,88,0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(48,166,83,0.3)}50%{box-shadow:0 0 0 5px rgba(48,166,83,0)}}
 `;
 
 // ─── SPLASH SCREEN ────────────────────────────────────────────────────────────
@@ -167,38 +203,8 @@ function SplashScreen({onDone}){
 }
 
 // ─── PAGE INTRO ───────────────────────────────────────────────────────────────
-function PageIntro({onEnter,inscrits,setInscrits}){
-  const [step,setStep]=useState("email");
-  const [email,setEmail]=useState("");
-  const [prenom,setPrenom]=useState("");
-  const [ville,setVille]=useState("");
-  const [err,setErr]=useState("");
-  const [welName,setWelName]=useState("");
-
-  useEffect(()=>{try{const s=localStorage.getItem("vp_email");if(s)setEmail(s);}catch(e){}});
-
-  function checkEmail(){
-    if(!email.trim()||!email.includes("@")){setErr("Adresse email invalide.");return;}
-    setErr("");
-    const ex=inscrits.find(v=>v.email.toLowerCase()===email.toLowerCase().trim());
-    if(ex){
-      setWelName(ex.prenom);setStep("bonjour");
-      try{localStorage.setItem("vp_email",email.trim());}catch(e){}
-      setTimeout(()=>onEnter({...ex,reconnexion:true}),1600);
-    } else setStep("profil");
-  }
-
-  function nextRole(){
-    if(!prenom.trim()){setErr("Merci d'entrer votre prénom.");return;}
-    setErr(""); setStep("role");
-  }
-
-  function createCompte(role){
-    const n={prenom:prenom.trim(),email:email.trim(),ville:ville.trim(),role,date:new Date().toLocaleString("fr-FR")};
-    setInscrits(prev=>[...prev,n]);
-    try{localStorage.setItem("vp_email",email.trim());}catch(e){}
-    onEnter(n);
-  }
+function PageIntro({onEnter,inscrits,setInscrits,adhesions,setAdhesions}){
+  const [vue,setVue]=useState("choix"); // choix | joueur | organisateur | confirm_org | connexion_orga
 
   return(
     <div className="intro-page">
@@ -212,70 +218,241 @@ function PageIntro({onEnter,inscrits,setInscrits}){
           <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.5}}>Créé par des joueurs pour vous simplifier la vie ❤️</div>
         </div>
 
-        {step==="email"&&(<>
-          <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Bienvenue</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginBottom:22,lineHeight:1.6}}>Entrez votre email pour vous connecter ou créer un compte.</div>
-          {err&&<div className="err-box">{err}</div>}
-          <div style={{marginBottom:20}}><label className="lbl">Adresse email</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&checkEmail()} className="field" style={{fontSize:16}}/></div>
-          <button onClick={checkEmail} className="btn btn-w btn-lg" style={{width:"100%"}}>Continuer →</button>
-          <p style={{fontSize:11,color:"var(--t4)",textAlign:"center",marginTop:12}}>Gratuit · Données confidentielles</p>
-        </>)}
-
-        {step==="profil"&&(<>
-          <button onClick={()=>{setStep("email");setErr("");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:16,padding:0,fontFamily:"inherit"}}>← Retour</button>
-          <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Créer votre compte</div>
-          <div style={{background:"rgba(48,209,88,0.08)",border:"1px solid rgba(48,209,88,0.18)",borderRadius:9,padding:"8px 12px",marginBottom:18,fontSize:13,color:"var(--green)",display:"flex",alignItems:"center",gap:7}}>
-            <span>✉️</span><span>{email}</span>
-          </div>
-          {err&&<div className="err-box">{err}</div>}
-          <div style={{marginBottom:12}}><label className="lbl">Prénom *</label><input type="text" value={prenom} onChange={e=>{setPrenom(e.target.value);setErr("");}} placeholder="Ex: Jean-Paul" onKeyDown={e=>e.key==="Enter"&&nextRole()} className="field"/></div>
-          <div style={{marginBottom:24}}><label className="lbl">Ville (optionnel)</label><input type="text" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Saint-Denis, Saint-Pierre..." className="field"/></div>
-          <button onClick={nextRole} className="btn btn-w btn-lg" style={{width:"100%"}}>Continuer →</button>
-        </>)}
-
-        {step==="role"&&(<>
-          <button onClick={()=>{setStep("profil");setErr("");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:16,padding:0,fontFamily:"inherit"}}>← Retour</button>
-          <div style={{fontSize:17,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Vous êtes ?</div>
-          <div style={{fontSize:13,color:"var(--t3)",marginBottom:20}}>Choisissez votre profil.</div>
-          <div onClick={()=>createCompte("joueur")} className="role-card" style={{marginBottom:10}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="#2563eb";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(37,99,235,0.15)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.11)";e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-            <div style={{width:44,height:44,borderRadius:11,background:"linear-gradient(135deg,#2563eb,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🏐</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:15,fontWeight:700,marginBottom:3}}>Joueur</div>
-              <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Voir les tournois, consulter le calendrier</div>
-            </div>
-            <span style={{color:"var(--t3)"}}>→</span>
-          </div>
-          <div onClick={()=>createCompte("organisateur")} className="role-card"
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="#fbbf24";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(251,191,36,0.12)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.11)";e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-            <div style={{width:44,height:44,borderRadius:11,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🏆</div>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
-                <span style={{fontSize:15,fontWeight:700}}>Organisateur</span>
-                <span style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24",fontSize:9,fontWeight:700,padding:"2px 5px",borderRadius:4,letterSpacing:0.4}}>VALIDATION</span>
-              </div>
-              <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Publier et gérer vos tournois</div>
-            </div>
-            <span style={{color:"var(--t3)"}}>→</span>
-          </div>
-        </>)}
-
-        {step==="bonjour"&&(
+        {vue==="choix"&&<VueChoix onJoueur={()=>setVue("joueur")} onOrga={()=>setVue("organisateur")} onConnexionOrga={()=>setVue("connexion_orga")}/>}
+        {vue==="joueur"&&<VueJoueur onBack={()=>setVue("choix")} inscrits={inscrits} setInscrits={setInscrits} onEnter={onEnter}/>}
+        {vue==="organisateur"&&<VueOrganisateur onBack={()=>setVue("choix")} adhesions={adhesions} setAdhesions={setAdhesions} onDone={()=>setVue("confirm_org")}/>}
+        {vue==="connexion_orga"&&<VueConnexionOrga onBack={()=>setVue("choix")} adhesions={adhesions} onEnter={onEnter}/>}
+        {vue==="confirm_org"&&(
           <div style={{textAlign:"center",padding:"16px 0"}}>
-            <div style={{fontSize:44,marginBottom:14}}>👋</div>
-            <div style={{fontSize:16,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Content de vous revoir,</div>
-            <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{welName}</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
-              <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
-              <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
-            </div>
+            <div style={{width:60,height:60,background:"rgba(48,209,88,0.1)",border:"1px solid rgba(48,209,88,0.25)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,margin:"0 auto 18px"}}>✅</div>
+            <div style={{fontSize:18,fontWeight:700,letterSpacing:-0.4,marginBottom:8}}>Demande envoyée !</div>
+            <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.7,marginBottom:24}}>Votre demande d'adhésion a bien été reçue.<br/>Notre équipe la validera sous peu.<br/>Vous recevrez une confirmation par email.</div>
+            <button className="btn btn-ghost" onClick={()=>setVue("choix")}>← Retour à l'accueil</button>
           </div>
         )}
       </div>
     </div>
   );
+}
+
+function VueChoix({onJoueur,onOrga,onConnexionOrga}){
+  return(<>
+    <div style={{fontSize:16,fontWeight:600,letterSpacing:-0.3,marginBottom:6}}>Bienvenue 👋</div>
+    <div style={{fontSize:13,color:"var(--t3)",marginBottom:24,lineHeight:1.6}}>Comment souhaitez-vous accéder à VolleyPéi ?</div>
+    <div onClick={onJoueur} className="role-card" style={{marginBottom:12,cursor:"pointer"}}
+      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(37,99,235,0.13)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
+      <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#2563eb,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏐</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:3}}>Je suis joueur</div>
+        <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Accès immédiat · Consulter les tournois</div>
+      </div>
+      <span style={{color:"var(--t3)",fontSize:18}}>→</span>
+    </div>
+    <div onClick={onOrga} className="role-card" style={{cursor:"pointer",marginBottom:12}}
+      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(251,191,36,0.15)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
+      <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏆</div>
+      <div style={{flex:1}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
+          <span style={{fontSize:15,fontWeight:700}}>Devenir organisateur</span>
+          <span style={{background:"rgba(251,191,36,0.15)",color:"#d97706",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,letterSpacing:0.5}}>VALIDATION</span>
+        </div>
+        <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Publier vos tournois · Sous validation admin</div>
+      </div>
+      <span style={{color:"var(--t3)",fontSize:18}}>→</span>
+    </div>
+    <div style={{textAlign:"center",paddingTop:4}}>
+      <button onClick={onConnexionOrga} style={{background:"none",border:"none",color:"var(--blue)",fontSize:13,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline",padding:0}}>
+        Déjà organisateur ? Se connecter
+      </button>
+    </div>
+  </>);
+}
+
+function VueConnexionOrga({onBack,adhesions,onEnter}){
+  const [email,setEmail]=useState("");
+  const [mdp,setMdp]=useState("");
+  const [showMdp,setShowMdp]=useState(false);
+  const [err,setErr]=useState("");
+  const [welcome,setWelcome]=useState(false);
+  const [nom,setNom]=useState("");
+
+  async function connecter(){
+    if(!email.trim()||!mdp){setErr("Merci de remplir tous les champs.");return;}
+    try {
+      // Supabase Auth email + password
+      await signInOrganisateur(email, mdp);
+      // Récupère le profil organisateur
+      const orga = await getOrganisateurByEmail(email);
+      if(!orga){
+        setErr("Compte non trouvé. Contactez l'équipe.");
+        return;
+      }
+      setNom(orga.prenom);
+      setWelcome(true);
+      setTimeout(()=>onEnter({...orga, role:"organisateur"}), 1500);
+    } catch(e) {
+      if(e.message?.includes("en_attente")) setErr("Votre demande est en cours de validation.");
+      else if(e.message?.includes("Invalid login")) setErr("Email ou mot de passe incorrect.");
+      else if(e.message?.includes("Email not confirmed")) setErr("Compte non encore activé.");
+      else { setErr("Email ou mot de passe incorrect."); console.error(e); }
+    }
+  }
+
+  if(welcome) return(
+    <div style={{textAlign:"center",padding:"16px 0"}}>
+      <div style={{fontSize:44,marginBottom:14}}>🏆</div>
+      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Bienvenue,</div>
+      <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{nom}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+        <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
+        <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
+      </div>
+    </div>
+  );
+
+  return(<>
+    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Connexion organisateur 🏆</div>
+    <div style={{fontSize:13,color:"var(--t3)",marginBottom:22,lineHeight:1.6}}>Connectez-vous avec l'email et le mot de passe définis lors de votre demande d'adhésion.</div>
+    {err&&<div className="err-box">{err}</div>}
+    <div style={{marginBottom:10}}><label className="lbl">Adresse email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:24}}>
+      <label className="lbl">Mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="Votre mot de passe" onKeyDown={e=>e.key==="Enter"&&connecter()} className="field" style={{paddingRight:44}}/>
+        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0,lineHeight:1}}>{showMdp?"🙈":"👁️"}</button>
+      </div>
+    </div>
+    <button onClick={connecter} className="btn btn-w btn-lg" style={{width:"100%"}}>Se connecter →</button>
+  </>);
+}
+
+function VueJoueur({onBack,inscrits,setInscrits,onEnter}){
+  const [prenom,setPrenom]=useState("");
+  const [nom,setNom]=useState("");
+  const [email,setEmail]=useState("");
+  const [ville,setVille]=useState("");
+  const [err,setErr]=useState("");
+  const [welName,setWelName]=useState("");
+  const [welcome,setWelcome]=useState(false);
+
+  async function connect(){
+    if(!prenom.trim()||!nom.trim()||!email.trim()||!email.includes("@")){setErr("Merci de remplir tous les champs obligatoires.");return;}
+    setErr("");
+    try {
+      // Cherche si le joueur existe déjà
+      const ex = await getJoueurByEmail(email);
+      if(ex){
+        setWelName(ex.prenom); setWelcome(true);
+        setTimeout(()=>onEnter({...ex, role:"joueur", reconnexion:true}), 1600);
+      } else {
+        const n = await createJoueur({prenom, nom, email, ville});
+        setInscrits(prev=>[...prev,{...n, role:"joueur"}]);
+        onEnter({...n, role:"joueur"});
+      }
+    } catch(e) {
+      setErr("Erreur de connexion. Réessayez.");
+      console.error(e);
+    }
+  }
+
+  if(welcome) return(
+    <div style={{textAlign:"center",padding:"16px 0"}}>
+      <div style={{fontSize:44,marginBottom:14}}>👋</div>
+      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Content de vous revoir,</div>
+      <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{welName}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+        <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
+        <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
+      </div>
+    </div>
+  );
+
+  return(<>
+    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Connexion joueur 🏐</div>
+    <div style={{fontSize:13,color:"var(--t3)",marginBottom:20,lineHeight:1.6}}>Entrez vos informations pour accéder au site.</div>
+    {err&&<div className="err-box">{err}</div>}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+      <div><label className="lbl">Prénom *</label><input type="text" value={prenom} onChange={e=>{setPrenom(e.target.value);setErr("");}} placeholder="Jean-Paul" className="field"/></div>
+      <div><label className="lbl">Nom *</label><input type="text" value={nom} onChange={e=>{setNom(e.target.value);setErr("");}} placeholder="Dupont" className="field"/></div>
+    </div>
+    <div style={{marginBottom:10}}><label className="lbl">Adresse email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&connect()} className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:22}}><label className="lbl">Ville</label><input type="text" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Saint-Denis, Saint-Pierre..." className="field"/></div>
+    <button onClick={connect} className="btn btn-w btn-lg" style={{width:"100%"}}>Accéder au site →</button>
+    <p style={{fontSize:11,color:"var(--t4)",textAlign:"center",marginTop:12}}>Gratuit · Accès immédiat · Données confidentielles</p>
+  </>);
+}
+
+function VueOrganisateur({onBack,adhesions,setAdhesions,onDone}){
+  const [prenom,setPrenom]=useState("");
+  const [nom,setNom]=useState("");
+  const [association,setAssociation]=useState("");
+  const [email,setEmail]=useState("");
+  const [mdp,setMdp]=useState("");
+  const [mdp2,setMdp2]=useState("");
+  const [showMdp,setShowMdp]=useState(false);
+  const [showMdp2,setShowMdp2]=useState(false);
+  const [err,setErr]=useState("");
+
+  async function envoyer(){
+    if(!prenom.trim()||!nom.trim()||!association.trim()||!email.trim()||!email.includes("@")){setErr("Merci de remplir tous les champs obligatoires.");return;}
+    if(!mdp||mdp.length<6){setErr("Le mot de passe doit contenir au moins 6 caractères.");return;}
+    if(mdp!==mdp2){setErr("Les mots de passe ne correspondent pas.");return;}
+    setErr("");
+    try {
+      await soumettreDemande({prenom, nom, association, email, mdp});
+      onDone();
+    } catch(e) {
+      if(e.message==="UNE_DEMANDE_EN_ATTENTE") setErr("Une demande est déjà en cours pour cet email.");
+      else if(e.message==="DEJA_VALIDEE") setErr("Ce compte est déjà validé. Connectez-vous directement.");
+      else { setErr("Erreur lors de l'envoi. Réessayez."); console.error(e); }
+    }
+  }
+
+  const mdpForce=mdp.length===0?0:mdp.length<6?1:mdp.length<10?2:3;
+  const mdpCouleur=["transparent","var(--red)","var(--yellow)","var(--green)"][mdpForce];
+  const mdpLabel=["","Trop court","Correct","Fort"][mdpForce];
+
+  return(<>
+    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Devenir organisateur 🏆</div>
+    <div className="info-box" style={{marginBottom:18}}>Votre demande sera examinée par notre équipe. Une fois validée, vous pourrez vous connecter avec votre email et mot de passe.</div>
+    {err&&<div className="err-box">{err}</div>}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+      <div><label className="lbl">Prénom *</label><input type="text" value={prenom} onChange={e=>{setPrenom(e.target.value);setErr("");}} placeholder="Jean-Paul" className="field"/></div>
+      <div><label className="lbl">Nom *</label><input type="text" value={nom} onChange={e=>{setNom(e.target.value);setErr("");}} placeholder="Dupont" className="field"/></div>
+    </div>
+    <div style={{marginBottom:10}}><label className="lbl">Association / Club *</label><input type="text" value={association} onChange={e=>{setAssociation(e.target.value);setErr("");}} placeholder="Beach Volley Réunion, Club XYZ..." className="field"/></div>
+    <div style={{marginBottom:10}}><label className="lbl">Adresse email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:10}}>
+      <label className="lbl">Mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="Minimum 6 caractères" className="field" style={{paddingRight:44}}/>
+        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0,lineHeight:1}}>{showMdp?"🙈":"👁️"}</button>
+      </div>
+      {mdp.length>0&&(
+        <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,height:3,borderRadius:2,background:"var(--b2)",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${[0,33,66,100][mdpForce]}%`,background:mdpCouleur,transition:"all 0.3s",borderRadius:2}}/>
+          </div>
+          <span style={{fontSize:11,color:mdpCouleur,fontWeight:600,minWidth:40}}>{mdpLabel}</span>
+        </div>
+      )}
+    </div>
+    <div style={{marginBottom:22}}>
+      <label className="lbl">Confirmer le mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp2?"text":"password"} value={mdp2} onChange={e=>{setMdp2(e.target.value);setErr("");}} placeholder="Répétez votre mot de passe" onKeyDown={e=>e.key==="Enter"&&envoyer()} className="field" style={{paddingRight:44,borderColor:mdp2&&mdp2!==mdp?"var(--red)":mdp2&&mdp2===mdp?"var(--green)":""}}/>
+        <button type="button" onClick={()=>setShowMdp2(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0,lineHeight:1}}>{showMdp2?"🙈":"👁️"}</button>
+      </div>
+      {mdp2&&<div style={{marginTop:5,fontSize:11,fontWeight:600,color:mdp2===mdp?"var(--green)":"var(--red)"}}>{mdp2===mdp?"✓ Mots de passe identiques":"✕ Ne correspond pas"}</div>}
+    </div>
+    <button onClick={envoyer} className="btn btn-w btn-lg" style={{width:"100%"}}>Envoyer ma demande →</button>
+    <p style={{fontSize:11,color:"var(--t4)",textAlign:"center",marginTop:12}}>Votre demande sera traitée sous 24-48h</p>
+  </>);
 }
 
 // ─── LOGIN ADMIN ──────────────────────────────────────────────────────────────
@@ -303,14 +480,53 @@ function LoginAdmin({onLogin,onBack}){
 }
 
 // ─── PANNEAU ADMIN ────────────────────────────────────────────────────────────
-function PanneauAdmin({sponsors,setSponsors,inscrits,tournois,setTournois,onBack}){
+function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTournois,adhesions,setAdhesions,getAllAdhesions,getAllJoueurs,onBack}){
+  // Charge les adhésions et joueurs dès l'ouverture du panneau admin
+  useEffect(()=>{
+    async function loadAdmin(){
+      try {
+        const [adh, jou] = await Promise.all([getAllAdhesions(), getAllJoueurs()]);
+        setAdhesions(adh);
+        setInscrits(jou);
+      } catch(e){ console.error("Admin load error:", e); }
+    }
+    loadAdmin();
+  },[]);
   const [saved,setSaved]=useState(false);
-  const [onglet,setOnglet]=useState("sponsors");
+  const [onglet,setOnglet]=useState("adhesions");
   function handleImage(id,file){if(!file)return;const r=new FileReader();r.onload=e=>setSponsors(prev=>prev.map(s=>s.id===id?{...s,image:e.target.result,actif:true}:s));r.readAsDataURL(file);}
   function handleField(id,k,v){setSponsors(prev=>prev.map(s=>s.id===id?{...s,[k]:v,actif:!!(v||s.image||s.nom)}:s));}
   function removeImg(id){setSponsors(prev=>prev.map(s=>s.id===id?{...s,image:null}:s));}
   function save(){setSaved(true);setTimeout(()=>setSaved(false),2200);}
-  function deleteTournoi(id){if(window.confirm("Supprimer ce tournoi ?"))setTournois(prev=>prev.filter(t=>t.id!==id));}
+  async function deleteTournoi(id){
+    if(!window.confirm("Supprimer ce tournoi ?")) return;
+    try {
+      await deleteTournoi(id);
+      setTournois(prev=>prev.filter(t=>t.id!==id));
+    } catch(e) { alert("Erreur : "+e.message); }
+  }
+  async function validerAdhesion(id){
+    try {
+      await validerAdhesion(id);
+      // Recharge les adhésions depuis Supabase
+      const updated = await getAllAdhesions();
+      setAdhesions(updated);
+    } catch(e) {
+      alert("Erreur lors de la validation : " + e.message);
+      console.error(e);
+    }
+  }
+  async function refuserAdhesion(id){
+    if(!window.confirm("Refuser cette demande ?")) return;
+    try {
+      await refuserAdhesion(id);
+      setAdhesions(prev=>prev.map(a=>a.id===id?{...a,statut:"refusee"}:a));
+    } catch(e) {
+      alert("Erreur : " + e.message);
+      console.error(e);
+    }
+  }
+  const nbEnAttente=adhesions.filter(a=>a.statut==="en_attente").length;
 
   return(
     <div className="adm-page">
@@ -330,15 +546,56 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,tournois,setTournois,onBack
       </nav>
       <div style={{background:"var(--s1)",borderBottom:"1px solid var(--b1)"}}>
         <div style={{maxWidth:840,margin:"0 auto",padding:"0 16px",display:"flex"}}>
-          {[["sponsors","Sponsors"],["tournois","Tournois"],["joueurs","Joueurs"]].map(([k,l])=>(
+          {[["adhesions","Adhésions"],["sponsors","Sponsors"],["tournois","Tournois"],["joueurs","Joueurs"]].map(([k,l])=>(
             <button key={k} className={`adm-tab ${onglet===k?"on":""}`} onClick={()=>setOnglet(k)}>
-              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="joueurs"?inscrits.length:k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
+              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="adhesions"?nbEnAttente:k==="joueurs"?inscrits.length:k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="adm-wrap">
+        {onglet==="adhesions"&&(
+          <div>
+            <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.6,marginBottom:4}}>Demandes d'adhésion organisateur</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:20}}>{nbEnAttente} demande{nbEnAttente!==1?"s":""} en attente de validation</div>
+            {adhesions.length===0?(
+              <div style={{background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:14,padding:"48px",textAlign:"center"}}>
+                <div style={{fontSize:40,marginBottom:10}}>📋</div>
+                <div style={{color:"var(--t3)",fontSize:14}}>Aucune demande d'adhésion pour l'instant.</div>
+              </div>
+            ):(
+              <div>
+                {adhesions.map(a=>(
+                  <div key={a.id} style={{background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:14,padding:"20px 22px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                    <div style={{flex:1,minWidth:200}}>
+                      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:6}}>
+                        <div style={{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🏆</div>
+                        <div>
+                          <div style={{fontSize:15,fontWeight:700,letterSpacing:-0.3}}>{a.prenom} {a.nom}</div>
+                          <div style={{fontSize:12,color:"var(--t3)"}}>{a.association}</div>
+                        </div>
+                      </div>
+                      <div style={{fontSize:12,color:"var(--t2)",marginBottom:3}}>✉️ {a.email}</div>
+                      <div style={{fontSize:11,color:"var(--t4)"}}>Demande reçue le {a.date}</div>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                      {a.statut==="en_attente"&&(<>
+                        <button onClick={()=>refuserAdhesion(a.id)} style={{background:"rgba(227,0,0,0.07)",border:"none",color:"var(--red)",borderRadius:980,padding:"8px 16px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}
+                          onMouseEnter={e=>e.currentTarget.style.background="rgba(227,0,0,0.13)"}
+                          onMouseLeave={e=>e.currentTarget.style.background="rgba(227,0,0,0.07)"}>Refuser</button>
+                        <button onClick={()=>validerAdhesion(a.id)} className="btn btn-w btn-sm" style={{background:"var(--green)",border:"none",borderRadius:980,padding:"8px 18px",fontSize:13,fontWeight:600}}>✓ Valider</button>
+                      </>)}
+                      {a.statut==="validee"&&<span style={{background:"rgba(48,166,83,0.1)",color:"var(--green)",borderRadius:980,padding:"6px 14px",fontSize:12,fontWeight:600}}>✓ Validée</span>}
+                      {a.statut==="refusee"&&<span style={{background:"rgba(227,0,0,0.07)",color:"var(--red)",borderRadius:980,padding:"6px 14px",fontSize:12,fontWeight:600}}>✕ Refusée</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {onglet==="sponsors"&&(
           <div>
             <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.6,marginBottom:4}}>Gestion des sponsors</div>
@@ -458,15 +715,37 @@ function ModalFormTournoi({onClose,onSubmit,tournois}){
   const [err,setErr]=useState("");
   const [warnDoublon,setWarnDoublon]=useState(null);
 
-  function handleAffiche(file){if(!file)return;const r=new FileReader();r.onload=e=>setForm(f=>({...f,affiche:e.target.result}));r.readAsDataURL(file);}
+  const [afficheFile,setAfficheFile]=useState(null);
+  const [uploading,setUploading]=useState(false);
 
-  function trySubmit(){
+  function handleAffiche(file){
+    if(!file) return;
+    setAfficheFile(file);
+    // Prévisualisation locale
+    const r=new FileReader();
+    r.onload=e=>setForm(f=>({...f,affiche:e.target.result}));
+    r.readAsDataURL(file);
+  }
+
+  async function trySubmit(){
     if(!form.nom||!form.date||!form.lieu||!form.contact||!form.organisateur){setErr("Merci de remplir tous les champs obligatoires.");return;}
     if(!form.affiche){setErr("L'affiche de l'événement est obligatoire.");return;}
     setErr("");
     const doublons=tournois.filter(t=>t.date===form.date);
     if(doublons.length>0){setWarnDoublon(doublons);return;}
-    onSubmit({...form,lat:parseFloat(form.lat)||null,lng:parseFloat(form.lng)||null});
+    await doSubmit();
+  }
+
+  async function doSubmit(){
+    setUploading(true);
+    try {
+      // On passe le File brut à onSubmit → createTournoi s'occupe de l'upload
+      onSubmit({...form, lat:parseFloat(form.lat)||null, lng:parseFloat(form.lng)||null}, afficheFile||null);
+    } catch(e) {
+      setErr("Erreur : "+e.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   if(warnDoublon) return(
@@ -483,7 +762,7 @@ function ModalFormTournoi({onClose,onSubmit,tournois}){
         </div>
         <div style={{display:"flex",gap:9}}>
           <button className="btn btn-ghost" onClick={()=>setWarnDoublon(null)} style={{flex:1,padding:"12px"}}>Voir les tournois</button>
-          <button className="btn btn-w" onClick={()=>{setWarnDoublon(null);onSubmit({...form,lat:parseFloat(form.lat)||null,lng:parseFloat(form.lng)||null});}} style={{flex:1,padding:"12px"}}>Publier quand même</button>
+          <button className="btn btn-w" disabled={uploading} onClick={()=>{setWarnDoublon(null);doSubmit();}} style={{flex:1,padding:"12px"}}>{uploading?"Upload...":"Publier quand même"}</button>
         </div>
       </div>
     </div>
@@ -532,7 +811,7 @@ function ModalFormTournoi({onClose,onSubmit,tournois}){
         <div style={{marginBottom:20}}><label className="lbl">Description</label><textarea rows={2} value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} className="field" style={{resize:"vertical"}}/></div>
         <div style={{display:"flex",gap:9}}>
           <button className="btn btn-ghost" onClick={onClose} style={{flex:1}}>Annuler</button>
-          <button className="btn btn-w" onClick={trySubmit} style={{flex:2,padding:"13px"}}>Publier le tournoi</button>
+          <button className="btn btn-w" onClick={trySubmit} disabled={uploading} style={{flex:2,padding:"13px"}}>{uploading?"Upload en cours...":"Publier le tournoi"}</button>
         </div>
       </div>
     </div>
@@ -581,43 +860,59 @@ function ModalInscription({onClose}){
 // showEmpty: bool (show placeholder on partners page)
 function SponsorBlock({sponsor,tier,showEmpty,index}){
   const cfg={
-    gold:{label:"Partenaire Gold",accent:"#FFD700",bg:"rgba(255,215,0,0.06)",border:"rgba(255,215,0,0.15)",badge:"GOLD ✦"},
-    silver:{label:"Partenaire Silver",accent:"#A0A0B8",bg:"rgba(160,160,184,0.06)",border:"rgba(160,160,184,0.15)",badge:"SILVER"},
-    bronze:{label:"Partenaire Bronze",accent:"#CD7F32",bg:"rgba(205,127,50,0.06)",border:"rgba(205,127,50,0.15)",badge:"BRONZE"},
-  }[tier]||{label:"Partenaire",accent:"#6e6e73",bg:"rgba(100,100,100,0.04)",border:"rgba(100,100,100,0.1)",badge:"•"};
+    gold:{label:"Partenaire Gold",gradient:"linear-gradient(180deg,#fef3c7,#fde68a)",accent:"#92400e",badge:"GOLD"},
+    silver:{label:"Partenaire Silver",gradient:"linear-gradient(180deg,#f3f4f6,#e5e7eb)",accent:"#4b5563",badge:"SILVER"},
+    bronze:{label:"Partenaire Bronze",gradient:"linear-gradient(180deg,#fed7aa,#fdba74)",accent:"#9a3412",badge:"BRONZE"},
+  }[tier]||{label:"Partenaire",gradient:"linear-gradient(180deg,#f5f5f7,#e5e7eb)",accent:"#6e6e73",badge:"•"};
 
   if(!sponsor&&!showEmpty) return null;
 
-  if(!sponsor&&showEmpty){
-    return(
-      <div style={{background:cfg.bg,border:`1px dashed ${cfg.border}`,borderRadius:tier==="gold"?16:12,padding:tier==="gold"?"18px 20px":"14px 16px",display:"flex",alignItems:"center",gap:12,opacity:0.7}}>
-        <div style={{width:tier==="gold"?48:38,height:tier==="gold"?48:38,borderRadius:10,background:"rgba(255,255,255,0.04)",border:`1px dashed ${cfg.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🏅</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:10,fontWeight:700,color:cfg.accent,letterSpacing:1.1,textTransform:"uppercase",marginBottom:3}}>{cfg.badge}</div>
-          <div style={{fontSize:tier==="gold"?13:12,fontWeight:600,color:"var(--t3)"}}>Emplacement disponible</div>
-          <div style={{fontSize:11,color:"var(--t4)",marginTop:2}}>Votre marque ici · Contactez-nous</div>
+  // Format compact pour silver/bronze
+  if(tier!=="gold"){
+    if(!sponsor&&showEmpty){
+      return(
+        <div style={{background:cfg.gradient,borderRadius:14,padding:"16px 14px",textAlign:"center",opacity:0.55,minHeight:tier==="silver"?110:90,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",gap:5}}>
+          <div style={{fontSize:9,fontWeight:600,color:cfg.accent,letterSpacing:1.2,textTransform:"uppercase"}}>{cfg.badge}</div>
+          <div style={{fontSize:tier==="silver"?13:11,fontWeight:600,color:"#1d1d1f",opacity:0.6}}>Emplacement disponible</div>
         </div>
-        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:980,padding:"6px 14px",fontSize:11,fontWeight:500,color:"var(--t3)",whiteSpace:"nowrap",cursor:"pointer",flexShrink:0}}>Plus d'infos</div>
+      );
+    }
+    return(
+      <div style={{background:cfg.gradient,borderRadius:14,padding:"16px 14px",textAlign:"center",cursor:"pointer",transition:"all 0.3s var(--ease)",minHeight:tier==="silver"?110:90,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",gap:tier==="silver"?6:4}}
+        onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 12px 24px rgba(0,0,0,0.08)";}}
+        onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+        <div style={{fontSize:9,fontWeight:600,color:cfg.accent,letterSpacing:1.2,textTransform:"uppercase"}}>{cfg.badge}</div>
+        <div style={{width:tier==="silver"?38:28,height:tier==="silver"?38:28,borderRadius:9,overflow:"hidden",background:"rgba(255,255,255,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:tier==="silver"?20:14,filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.05))"}}>
+          {sponsor.image?<img src={sponsor.image} alt={sponsor.nom} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:
+            <span>{sponsor.emoji||"🏅"}</span>}
+        </div>
+        <div style={{fontSize:tier==="silver"?14:11,fontWeight:600,color:"#1d1d1f",letterSpacing:-0.2,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sponsor.nom||"Partenaire"}</div>
       </div>
     );
   }
 
+  // GOLD = section produit principale type Apple
+  if(!sponsor&&showEmpty){
+    return(
+      <div style={{background:cfg.gradient,borderRadius:18,padding:"28px 22px",textAlign:"center",opacity:0.6,border:"1px dashed rgba(146,64,14,0.2)"}}>
+        <div style={{fontSize:10,fontWeight:600,color:cfg.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>{cfg.label}</div>
+        <div style={{fontSize:22,fontWeight:600,color:"#1d1d1f",letterSpacing:-0.3,marginBottom:6,opacity:0.7}}>Emplacement disponible</div>
+        <div style={{fontSize:14,color:"#1d1d1f",opacity:0.55}}>Votre marque ici · Contactez-nous</div>
+      </div>
+    );
+  }
   return(
-    <div style={{background:cfg.bg,border:`1px solid ${cfg.border}`,borderRadius:tier==="gold"?16:12,padding:tier==="gold"?"18px 20px":"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"all 0.2s"}}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor=cfg.accent;e.currentTarget.style.boxShadow=`0 4px 20px ${cfg.bg}`;}}
-      onMouseLeave={e=>{e.currentTarget.style.borderColor=cfg.border;e.currentTarget.style.boxShadow="none";}}>
-      <div style={{width:tier==="gold"?52:42,height:tier==="gold"?52:42,borderRadius:11,background:"var(--s3)",border:"1px solid var(--b2)",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+    <div style={{background:cfg.gradient,borderRadius:18,padding:"28px 22px",textAlign:"center",cursor:"pointer",transition:"all 0.4s var(--ease)"}}
+      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 24px 48px rgba(0,0,0,0.08)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+      <div style={{fontSize:10,fontWeight:600,color:cfg.accent,letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>{cfg.label}</div>
+      <div style={{width:54,height:54,borderRadius:14,background:"rgba(255,255,255,0.5)",margin:"0 auto 12px",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.08))"}}>
         {sponsor.image?<img src={sponsor.image} alt={sponsor.nom} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:
           <span>{sponsor.emoji||"🏅"}</span>}
       </div>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:10,fontWeight:700,color:cfg.accent,letterSpacing:1.1,textTransform:"uppercase",marginBottom:2}}>{cfg.badge}</div>
-        <div style={{fontSize:tier==="gold"?14:13,fontWeight:700,color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sponsor.nom||"Partenaire"}</div>
-        {sponsor.texte&&<div style={{fontSize:11,color:"var(--t3)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sponsor.texte}</div>}
-      </div>
-      <div style={{background:"rgba(255,255,255,0.06)",border:"1px solid var(--b2)",borderRadius:980,padding:"7px 15px",fontSize:12,fontWeight:500,color:"var(--t2)",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}
-        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)";e.currentTarget.style.color="var(--t1)";}}
-        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.06)";e.currentTarget.style.color="var(--t2)";}}>Plus d'infos</div>
+      <div style={{fontSize:24,fontWeight:600,color:"#1d1d1f",letterSpacing:-0.3,marginBottom:6,lineHeight:1.1}}>{sponsor.nom||"Partenaire"}</div>
+      {sponsor.texte&&<div style={{fontSize:15,color:"#1d1d1f",opacity:0.7,marginBottom:14,lineHeight:1.3}}>{sponsor.texte}</div>}
+      <button className="link link-sm">En savoir plus</button>
     </div>
   );
 }
@@ -655,7 +950,15 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
   return(
     <div style={{maxWidth:800,margin:"0 auto",padding:"28px 16px 60px"}}>
       {showDetail&&<ModalTournoi tournoi={showDetail} onClose={()=>setShowDetail(null)}/>}
-      {showForm&&<ModalFormTournoi tournois={tournois} onClose={()=>setShowForm(false)} onSubmit={form=>{const t={...form,id:nextId,joueurs:parseInt(form.joueurs)||0};setTournois(prev=>[...prev,t]);setNextId(n=>n+1);setShowForm(false);const[y,m]=form.date.split("-");setAnnee(parseInt(y));setMois(parseInt(m)-1);setSelected(form.date);}}/>}
+      {showForm&&<ModalFormTournoi tournois={tournois} onClose={()=>setShowForm(false)} onSubmit={async (form, afficheFile)=>{
+        try {
+          const t = await createTournoi(form, afficheFile, currentUser?.email||"");
+          setTournois(prev=>[...prev, t]);
+          setShowForm(false);
+          const[y,m]=form.date.split("-");
+          setAnnee(parseInt(y)); setMois(parseInt(m)-1); setSelected(form.date);
+        } catch(e){ alert("Erreur publication : "+e.message); console.error(e); }
+      }}/>}
 
       {/* ── GOLD SPONSOR (au-dessus de tout) ── */}
       {(showEmpty||goldSponsor)&&(
@@ -664,38 +967,31 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
         </div>
       )}
 
-      {/* Salutation */}
+      {/* Salutation - hero style Apple */}
       {currentUser&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:10}}>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:32,height:32,borderRadius:"50%",background:currentUser.role==="organisateur"?"linear-gradient(135deg,#fbbf24,#f59e0b)":"linear-gradient(135deg,#2563eb,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"white",flexShrink:0}}>
-              {currentUser.prenom?.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>Salut {currentUser.prenom} 👋</div>
-              <div style={{fontSize:11,color:"var(--t3)",marginTop:1}}>{currentUser.role==="organisateur"?"Organisateur":"Joueur"}</div>
-            </div>
-          </div>
+        <div style={{textAlign:"center",padding:"32px 0 28px",position:"relative"}}>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--t3)",letterSpacing:-0.1,marginBottom:6}}>Salut {currentUser.prenom} 👋</div>
+          <div style={{fontSize:11,color:"var(--t4)",letterSpacing:1.2,textTransform:"uppercase",fontWeight:600,marginBottom:14}}>{currentUser.role==="organisateur"?"Organisateur":"Joueur"}</div>
           {currentUser.role==="organisateur"&&(
-            <button className="btn btn-w btn-sm" onClick={()=>setShowForm(true)}>+ Publier un tournoi</button>
+            <button className="btn btn-w" onClick={()=>setShowForm(true)} style={{marginTop:6}}>+ Publier un tournoi</button>
           )}
           {currentUser.role==="joueur"&&(
-            <button className="btn btn-ghost btn-sm" onClick={onShowInscription}>Devenir organisateur</button>
+            <button className="btn btn-ghost" onClick={onShowInscription} style={{marginTop:6}}>Devenir organisateur</button>
           )}
         </div>
       )}
 
       {/* Stats */}
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:50,padding:"6px 14px"}}>
-          <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 2s infinite"}}/>
-          <span style={{fontSize:13,fontWeight:700,color:"var(--t1)"}}>{inscrits.length}</span>
-          <span style={{fontSize:11,color:"var(--t3)"}}>joueur(se)s actif(ve)s</span>
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap",justifyContent:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,background:"rgba(0,0,0,0.04)",borderRadius:50,padding:"6px 14px"}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"var(--green)",animation:"pulse 2s infinite"}}/>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{inscrits.length}</span>
+          <span style={{fontSize:12,color:"var(--t3)"}}>joueur(se)s actif(ve)s</span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:7,background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:50,padding:"6px 14px"}}>
-          <span style={{fontSize:11}}>🏆</span>
-          <span style={{fontSize:13,fontWeight:700,color:"var(--t1)"}}>{tournois.length}</span>
-          <span style={{fontSize:11,color:"var(--t3)"}}>tournoi{tournois.length!==1?"s":""}</span>
+        <div style={{display:"flex",alignItems:"center",gap:7,background:"rgba(0,0,0,0.04)",borderRadius:50,padding:"6px 14px"}}>
+          <span style={{fontSize:12}}>🏆</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{tournois.length}</span>
+          <span style={{fontSize:12,color:"var(--t3)"}}>tournoi{tournois.length!==1?"s":""}</span>
         </div>
       </div>
 
@@ -749,30 +1045,42 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
 
       {/* Légende sélection */}
       {selected&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <div style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>
-            {selT.length>0?`${selT.length} tournoi${selT.length>1?"s":""} — ${selected.split("-").reverse().join("/")}`:
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18,padding:"0 4px"}}>
+          <div style={{fontSize:20,fontWeight:600,color:"var(--t1)",letterSpacing:-0.3}}>
+            {selT.length>0?`${selT.length} tournoi${selT.length>1?"s":""} · ${selected.split("-").reverse().join("/")}`:
             `Aucun tournoi le ${selected.split("-").reverse().join("/")}`}
           </div>
-          <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",color:"var(--t3)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Voir tous →</button>
+          <button onClick={()=>setSelected(null)} className="link link-sm">Tout voir</button>
         </div>
       )}
-      {!selected&&<div style={{fontSize:13,color:"var(--t3)",marginBottom:14,fontWeight:500}}>Prochains tournois</div>}
+      {!selected&&displayT.length>0&&(
+        <div style={{textAlign:"center",marginBottom:22,marginTop:8}}>
+          <div style={{fontSize:11,fontWeight:600,color:"var(--t3)",letterSpacing:1.5,textTransform:"uppercase"}}>Prochains tournois</div>
+        </div>
+      )}
 
       {/* CARTES TOURNOIS */}
       {displayT.length===0?
-        <div style={{textAlign:"center",padding:"40px 20px",color:"var(--t3)"}}>
-          <div style={{fontSize:32,marginBottom:10}}>📅</div>
-          <div style={{fontSize:14}}>Aucun tournoi prévu</div>
+        <div style={{textAlign:"center",padding:"60px 20px",color:"var(--t3)"}}>
+          <div style={{fontSize:36,marginBottom:14,opacity:0.4}}>📅</div>
+          <div style={{fontSize:15,fontWeight:500,color:"var(--t1)",marginBottom:4}}>Aucun tournoi pour l'instant</div>
+          <div style={{fontSize:13,color:"var(--t3)"}}>{currentUser?.role==="organisateur"?"Soyez le premier à publier un tournoi !":"Les prochains tournois apparaîtront ici."}</div>
         </div>:
         <div className="t-cards-grid">
           {displayT.map(t=>{
             const tagCls=typeTagClass[t.type]||"tag";
+            const typeGrad={
+              "Beach Volley":"linear-gradient(180deg,#dbeafe,#bfdbfe)",
+              "Green Volley":"linear-gradient(180deg,#d1fae5,#a7f3d0)",
+              "Volley Indoor":"linear-gradient(180deg,#f3f4f6,#e5e7eb)",
+              "Mixte":"linear-gradient(180deg,#fef3c7,#fde68a)",
+              "Loisir":"linear-gradient(180deg,#fce7f3,#fbcfe8)",
+            }[t.type]||"linear-gradient(180deg,#f5f5f7,#e5e7eb)";
             return(
               <div key={t.id} className="t-card" onClick={()=>setShowDetail(t)}>
                 {t.affiche?
                   <img src={t.affiche} alt="" className="t-card-cover"/>:
-                  <div className="t-card-cover">{typeEmoji[t.type]||"🏐"}</div>
+                  <div className="t-card-cover" style={{background:typeGrad}}>{typeEmoji[t.type]||"🏐"}</div>
                 }
                 <div className="t-card-body">
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:10}}>
@@ -893,16 +1201,16 @@ function PagePartenaires({onBack,tournois,inscrits}){
             <button className="nav-tab">Carte</button>
           </div>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <button onClick={onBack} style={{background:"var(--s4)",border:"1px solid var(--b2)",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"5px 13px",borderRadius:8,fontFamily:"inherit",letterSpacing:-0.1}}>← Retour</button>
+            <button onClick={onBack} style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"6px 14px",borderRadius:980,fontFamily:"inherit",letterSpacing:-0.1}}>← Retour</button>
           </div>
         </div>
       </nav>
-      <div style={{height:2,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:0.4,marginTop:52}}/>
+      <div style={{height:3,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:1,marginTop:48}}/>
 
       {/* Bandeau aperçu */}
-      <div style={{background:"linear-gradient(90deg,rgba(37,99,235,0.12),rgba(48,209,88,0.06))",borderBottom:"1px solid rgba(37,99,235,0.12)",padding:"9px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:"var(--blue2)",animation:"pulse 1.8s infinite"}}/>
-        <span style={{fontSize:12,fontWeight:500,color:"var(--blue2)",letterSpacing:0.2}}>Aperçu partenaires · Tous les emplacements sont affichés</span>
+      <div style={{background:"linear-gradient(90deg,rgba(0,102,204,0.06),rgba(48,166,83,0.04))",borderBottom:"1px solid rgba(0,102,204,0.12)",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <div style={{width:6,height:6,borderRadius:"50%",background:"var(--blue)",animation:"pulse 1.8s infinite"}}/>
+        <span style={{fontSize:12,fontWeight:500,color:"var(--blue)",letterSpacing:0.2}}>Aperçu partenaires · Tous les emplacements sont affichés</span>
       </div>
 
       {/* Vraie page calendrier avec showEmpty=true */}
@@ -931,12 +1239,30 @@ export default function App(){
   const [currentUser,setCurrentUser]=useState(null);
   const [inscrits,setInscrits]=useState([]);
   const [sponsors,setSponsors]=useState(INIT_SP);
-  const [tournois,setTournois]=useState(TOURNOIS_INIT);
+  const [tournois,setTournois]=useState([]);
   const [showInscription,setShowInscription]=useState(false);
-  const [showPopup,setShowPopup]=useState(true);
+  const [adhesions,setAdhesions]=useState([]);
+  const [showPopup,setShowPopup]=useState(false);
+  const [loading,setLoading]=useState(true);
 
-  // Route partenaires via hash
+  // ── Chargement initial depuis Supabase ──
   useEffect(()=>{
+    async function init(){
+      try {
+        const [ts, js] = await Promise.all([
+          getAllTournois(),
+          getAllJoueurs(),
+        ]);
+        setTournois(ts.map(t=>({...t, affiche: t.affiche_url||null})));
+        setInscrits(js);
+      } catch(e){
+        console.error("Erreur chargement initial :", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
+    // Route partenaires via hash
     if(window.location.hash==="#partenaires") setPage("partenaires");
   },[]);
 
@@ -945,8 +1271,8 @@ export default function App(){
   if(showSplash) return <SplashScreen onDone={()=>setShowSplash(false)}/>;
   if(page==="partenaires") return <PagePartenaires onBack={()=>setPage("home")} tournois={tournois} inscrits={inscrits}/>;
   if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")}/>;
-  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} tournois={tournois} setTournois={setTournois} onBack={()=>setPage("home")}/>;
-  if(!accesOK) return <PageIntro onEnter={handleIntro} inscrits={inscrits} setInscrits={setInscrits}/>;
+  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>setPage("home")}/>;
+  if(!accesOK) return <PageIntro onEnter={handleIntro} inscrits={inscrits} setInscrits={setInscrits} adhesions={adhesions} setAdhesions={setAdhesions}/>;
 
   return(
     <>
@@ -989,19 +1315,18 @@ export default function App(){
               <button className={`nav-tab ${page==="carte"?"on":""}`} onClick={()=>setPage("carte")}>Carte</button>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <button onClick={()=>setShowPopup(true)} style={{background:"none",border:"none",color:"var(--t3)",fontSize:11,cursor:"pointer",padding:"5px 8px",borderRadius:7,fontFamily:"inherit"}} className="nl">▶</button>
               <button onClick={()=>setPage("partenaires")} style={{background:"none",border:"none",color:"var(--t3)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"5px 11px",borderRadius:7,fontFamily:"inherit",letterSpacing:-0.1,transition:"color 0.15s"}}
                 onMouseEnter={e=>e.currentTarget.style.color="var(--t1)"}
                 onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>Partenaires</button>
-              <button style={{background:"var(--s4)",border:"1px solid var(--b2)",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"5px 13px",borderRadius:8,fontFamily:"inherit",letterSpacing:-0.1,transition:"all 0.15s"}} onClick={()=>setPage("login")}
-                onMouseEnter={e=>{e.currentTarget.style.background="var(--s3)";e.currentTarget.style.color="var(--t1)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="var(--s4)";e.currentTarget.style.color="var(--t2)";}}>Admin</button>
+              <button style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"6px 14px",borderRadius:980,fontFamily:"inherit",letterSpacing:-0.1,transition:"all 0.15s"}} onClick={()=>setPage("login")}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,0,0,0.08)";e.currentTarget.style.color="var(--t1)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,0.04)";e.currentTarget.style.color="var(--t2)";}}>Admin</button>
             </div>
           </div>
         </nav>
 
         {/* Bande drapeau sous la nav */}
-        <div style={{height:2,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:0.4}}/>
+        <div style={{height:3,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:1}}/>
 
         {/* PAGES */}
         {page==="home"&&<PageCalendrier tournois={tournois} setTournois={setTournois} currentUser={currentUser} sponsors={sponsors} inscrits={inscrits} onGoAdmin={()=>setPage("login")} onShowInscription={()=>setShowInscription(true)}/>}

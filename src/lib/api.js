@@ -123,7 +123,7 @@ export async function validerAdhesion(adhesionId) {
   // 3. Met à jour le statut → validee
   const { error: e3 } = await supabase
     .from('adhesions')
-    .update({ statut: 'validee', mdp_tmp: '', updated_at: new Date().toISOString() })
+    .update({ statut: 'validee', updated_at: new Date().toISOString() })
     .eq('id', adhesionId);
   if (e3) throw e3;
 }

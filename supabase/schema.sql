@@ -138,3 +138,36 @@ create policy "storage_insert_auth" on storage.objects
 
 create policy "storage_select_public" on storage.objects
   for select using (bucket_id = 'volleypei');
+
+-- ─── TABLE : visites ─────────────────────────────────────────────────────────
+-- Enregistre une visite par jour (upsert sur la date)
+create table if not exists visites (
+  id         uuid primary key default uuid_generate_v4(),
+  jour       date not null unique,
+  nb         integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table visites enable row level security;
+
+-- Insertion/update publique (tracker côté client)
+create policy "visites_insert" on visites
+  for insert with check (true);
+
+create policy "visites_update" on visites
+  for update using (true);
+
+-- Lecture publique (widget visible sur le site)
+create policy "visites_select" on visites
+  for select using (true);
+
+-- ─── FONCTION : upsert_visite ─────────────────────────────────────────────────
+-- Incrémente le compteur du jour, ou insère 1 si le jour n'existe pas encore
+create or replace function upsert_visite(p_jour date)
+returns void language plpgsql security definer as $$
+begin
+  insert into visites (jour, nb) values (p_jour, 1)
+  on conflict (jour) do update set nb = visites.nb + 1, updated_at = now();
+end;
+$$;

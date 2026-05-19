@@ -3,11 +3,8 @@ import {
   getJoueurByEmail,
   createJoueur,
   getAllJoueurs,
-  signUpJoueur,
-  signInJoueur,
   signInOrganisateur,
   signOut,
-  getSession,
   getOrganisateurByEmail,
   soumettreDemande,
   getAllAdhesions,
@@ -18,6 +15,8 @@ import {
   deleteTournoi,
   uploadAffiche,
   getDashboardStats,
+  enregistrerVisite,
+  getVisitesStats,
 } from "./lib/api.js";
 import { supabase } from "./lib/supabase.js";
 
@@ -207,32 +206,38 @@ function SplashScreen({onDone}){
   );
 }
 
-// ─── PAGE INTRO ───────────────────────────────────────────────────────────────
-function PageIntro({onEnter,inscrits,setInscrits,adhesions,setAdhesions}){
-  const [vue,setVue]=useState("choix"); // choix | joueur | organisateur | confirm_org | connexion_orga
+// ─── MODAL ORGANISATEUR (demande adhésion) ───────────────────────────────────
+function ModalOrganisateur({onClose,adhesions,setAdhesions}){
+  const [vue,setVue]=useState("choix"); // choix | demande | confirm | connexion
 
   return(
-    <div className="intro-page">
+    <div className="overlay" onClick={onClose}>
       <style>{CSS}</style>
-      <div style={{position:"absolute",top:-200,left:"50%",transform:"translateX(-50%)",width:700,height:700,background:"radial-gradient(circle,rgba(37,99,235,0.06) 0%,transparent 65%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:0,left:0,right:0}}><div className="strip"/></div>
-      <div className="intro-card">
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <img src={LOGO_B64} alt="VolleyPéi" style={{width:64,height:64,borderRadius:16,margin:"0 auto 14px",display:"block",boxShadow:"0 6px 24px rgba(37,99,235,0.2)"}}/>
-          <div style={{fontSize:20,fontWeight:800,letterSpacing:-0.5,marginBottom:4}}>VolleyPéi</div>
-          <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.5}}>Créé par des joueurs pour vous simplifier la vie ❤️</div>
+      <div className="intro-card" style={{maxWidth:460,width:"94vw",position:"relative"}} onClick={e=>e.stopPropagation()}>
+        <button onClick={onClose} style={{position:"absolute",top:16,right:16,background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--t3)",lineHeight:1}}>✕</button>
+
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <img src={LOGO_B64} alt="VolleyPéi" style={{width:52,height:52,borderRadius:14,margin:"0 auto 12px",display:"block",boxShadow:"0 6px 24px rgba(37,99,235,0.2)"}}/>
+          <div style={{fontSize:18,fontWeight:800,letterSpacing:-0.5}}>Espace organisateur</div>
         </div>
 
-        {vue==="choix"&&<VueChoix onJoueur={()=>setVue("joueur")} onOrga={()=>setVue("organisateur")} onConnexionOrga={()=>setVue("connexion_orga")}/>}
-        {vue==="joueur"&&<VueJoueur onBack={()=>setVue("choix")} onEnter={onEnter}/>}
-        {vue==="organisateur"&&<VueOrganisateur onBack={()=>setVue("choix")} adhesions={adhesions} setAdhesions={setAdhesions} onDone={()=>setVue("confirm_org")}/>}
-        {vue==="connexion_orga"&&<VueConnexionOrga onBack={()=>setVue("choix")} adhesions={adhesions} onEnter={onEnter}/>}
-        {vue==="confirm_org"&&(
-          <div style={{textAlign:"center",padding:"16px 0"}}>
-            <div style={{width:60,height:60,background:"rgba(48,209,88,0.1)",border:"1px solid rgba(48,209,88,0.25)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,margin:"0 auto 18px"}}>✅</div>
-            <div style={{fontSize:18,fontWeight:700,letterSpacing:-0.4,marginBottom:8}}>Demande envoyée !</div>
-            <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.7,marginBottom:24}}>Votre demande d'adhésion a bien été reçue.<br/>Notre équipe la validera sous peu.<br/>Vous recevrez une confirmation par email.</div>
-            <button className="btn btn-ghost" onClick={()=>setVue("choix")}>← Retour à l'accueil</button>
+        {vue==="choix"&&(
+          <>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:22,textAlign:"center",lineHeight:1.6}}>Vous souhaitez publier des tournois sur VolleyPéi ?</div>
+            <button onClick={()=>setVue("demande")} className="btn btn-w btn-lg" style={{width:"100%",marginBottom:10}}>Faire une demande d'adhésion →</button>
+            <button onClick={()=>setVue("connexion")} className="btn btn-ghost btn-lg" style={{width:"100%"}}>Déjà organisateur ? Se connecter</button>
+          </>
+        )}
+
+        {vue==="demande"&&<VueOrganisateur onBack={()=>setVue("choix")} adhesions={adhesions} setAdhesions={setAdhesions} onDone={()=>setVue("confirm")}/>}
+        {vue==="connexion"&&<VueConnexionOrga onBack={()=>setVue("choix")} adhesions={adhesions} onEnter={(u)=>{onClose();}} />}
+
+        {vue==="confirm"&&(
+          <div style={{textAlign:"center",padding:"8px 0"}}>
+            <div style={{width:60,height:60,background:"rgba(48,209,88,0.1)",border:"1px solid rgba(48,209,88,0.25)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 18px"}}>✅</div>
+            <div style={{fontSize:17,fontWeight:700,letterSpacing:-0.4,marginBottom:8}}>Demande envoyée !</div>
+            <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.7,marginBottom:24}}>Votre demande a bien été reçue.<br/>Notre équipe la validera sous peu.</div>
+            <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
           </div>
         )}
       </div>
@@ -240,222 +245,6 @@ function PageIntro({onEnter,inscrits,setInscrits,adhesions,setAdhesions}){
   );
 }
 
-function VueChoix({onJoueur,onOrga,onConnexionOrga}){
-  return(<>
-    <div style={{fontSize:16,fontWeight:600,letterSpacing:-0.3,marginBottom:6}}>Bienvenue 👋</div>
-    <div style={{fontSize:13,color:"var(--t3)",marginBottom:24,lineHeight:1.6}}>Comment souhaitez-vous accéder à VolleyPéi ?</div>
-    <div onClick={onJoueur} className="role-card" style={{marginBottom:12,cursor:"pointer"}}
-      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(37,99,235,0.13)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-      <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#2563eb,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏐</div>
-      <div style={{flex:1}}>
-        <div style={{fontSize:15,fontWeight:700,marginBottom:3}}>Je suis joueur</div>
-        <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Accès immédiat · Consulter les tournois</div>
-      </div>
-      <span style={{color:"var(--t3)",fontSize:18}}>→</span>
-    </div>
-    <div onClick={onOrga} className="role-card" style={{cursor:"pointer",marginBottom:12}}
-      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(251,191,36,0.15)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
-      <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏆</div>
-      <div style={{flex:1}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
-          <span style={{fontSize:15,fontWeight:700}}>Devenir organisateur</span>
-          <span style={{background:"rgba(251,191,36,0.15)",color:"#d97706",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,letterSpacing:0.5}}>VALIDATION</span>
-        </div>
-        <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.4}}>Publier vos tournois · Sous validation admin</div>
-      </div>
-      <span style={{color:"var(--t3)",fontSize:18}}>→</span>
-    </div>
-    <div style={{textAlign:"center",paddingTop:4}}>
-      <button onClick={onConnexionOrga} style={{background:"none",border:"none",color:"var(--blue)",fontSize:13,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline",padding:0}}>
-        Déjà organisateur ? Se connecter
-      </button>
-    </div>
-  </>);
-}
-
-function VueConnexionOrga({onBack,adhesions,onEnter}){
-  const [email,setEmail]=useState("");
-  const [mdp,setMdp]=useState("");
-  const [showMdp,setShowMdp]=useState(false);
-  const [err,setErr]=useState("");
-  const [welcome,setWelcome]=useState(false);
-  const [nom,setNom]=useState("");
-
-  async function connecter(){
-    if(!email.trim()||!mdp){setErr("Merci de remplir tous les champs.");return;}
-    try {
-      // Supabase Auth email + password
-      await signInOrganisateur(email, mdp);
-      // Récupère le profil organisateur
-      const orga = await getOrganisateurByEmail(email);
-      if(!orga){
-        setErr("Compte non trouvé. Contactez l'équipe.");
-        return;
-      }
-      setNom(orga.prenom);
-      setWelcome(true);
-      setTimeout(()=>onEnter({...orga, role:"organisateur"}), 1500);
-    } catch(e) {
-      if(e.message?.includes("en_attente")) setErr("Votre demande est en cours de validation.");
-      else if(e.message?.includes("Invalid login")) setErr("Email ou mot de passe incorrect.");
-      else if(e.message?.includes("Email not confirmed")) setErr("Compte non encore activé.");
-      else { setErr("Email ou mot de passe incorrect."); console.error(e); }
-    }
-  }
-
-  if(welcome) return(
-    <div style={{textAlign:"center",padding:"16px 0"}}>
-      <div style={{fontSize:44,marginBottom:14}}>🏆</div>
-      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Bienvenue,</div>
-      <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{nom}</div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
-        <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
-        <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
-      </div>
-    </div>
-  );
-
-  return(<>
-    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
-    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Connexion organisateur 🏆</div>
-    <div style={{fontSize:13,color:"var(--t3)",marginBottom:22,lineHeight:1.6}}>Connectez-vous avec l'email et le mot de passe définis lors de votre demande d'adhésion.</div>
-    {err&&<div className="err-box">{err}</div>}
-    <div style={{marginBottom:10}}><label className="lbl">Adresse email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
-    <div style={{marginBottom:24}}>
-      <label className="lbl">Mot de passe *</label>
-      <div style={{position:"relative"}}>
-        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="Votre mot de passe" onKeyDown={e=>e.key==="Enter"&&connecter()} className="field" style={{paddingRight:44}}/>
-        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0,lineHeight:1}}>{showMdp?"🙈":"👁️"}</button>
-      </div>
-    </div>
-    <button onClick={connecter} className="btn btn-w btn-lg" style={{width:"100%"}}>Se connecter →</button>
-  </>);
-}
-
-function VueJoueur({onBack,onEnter}){
-  const [mode,setMode]=useState("choix"); // choix | login | signup
-  const [prenom,setPrenom]=useState("");
-  const [nom,setNom]=useState("");
-  const [email,setEmail]=useState("");
-  const [ville,setVille]=useState("");
-  const [mdp,setMdp]=useState("");
-  const [mdp2,setMdp2]=useState("");
-  const [showMdp,setShowMdp]=useState(false);
-  const [err,setErr]=useState("");
-  const [loading,setLoading]=useState(false);
-  const [welName,setWelName]=useState("");
-  const [welcome,setWelcome]=useState(false);
-
-  function reset(){setErr("");setMdp("");setMdp2("");}
-
-  async function handleSignup(){
-    if(!prenom.trim()||!nom.trim()||!email.trim()||!email.includes("@")){setErr("Remplis tous les champs obligatoires.");return;}
-    if(!mdp||mdp.length<6){setErr("Mot de passe : 6 caractères minimum.");return;}
-    if(mdp!==mdp2){setErr("Les mots de passe ne correspondent pas.");return;}
-    setErr(""); setLoading(true);
-    try {
-      const res = await signUpJoueur({prenom, nom, email, ville, password: mdp});
-      onEnter({...res, role:"joueur"});
-    } catch(e){
-      if(e.message?.includes("already registered")) setErr("Cet email est déjà utilisé. Connecte-toi.");
-      else setErr(e.message||"Erreur lors de l'inscription.");
-    } finally { setLoading(false); }
-  }
-
-  async function handleLogin(){
-    if(!email.trim()||!mdp){setErr("Email et mot de passe requis.");return;}
-    setErr(""); setLoading(true);
-    try {
-      const res = await signInJoueur(email, mdp);
-      setWelName(res.profil?.prenom||email);
-      setWelcome(true);
-      setTimeout(()=>onEnter({...res.profil, role:"joueur"}), 1500);
-    } catch(e){
-      if(e.message?.includes("Invalid login")) setErr("Email ou mot de passe incorrect.");
-      else setErr(e.message||"Erreur de connexion.");
-    } finally { setLoading(false); }
-  }
-
-  if(welcome) return(
-    <div style={{textAlign:"center",padding:"16px 0"}}>
-      <div style={{fontSize:44,marginBottom:14}}>👋</div>
-      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Content de te revoir,</div>
-      <div style={{fontSize:26,fontWeight:800,letterSpacing:-0.8,marginBottom:20}}>{welName}</div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
-        <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
-        <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
-      </div>
-    </div>
-  );
-
-  // ── Choix signup / login ──
-  if(mode==="choix") return(<>
-    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
-    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:4}}>Espace joueur 🏐</div>
-    <div style={{fontSize:13,color:"var(--t3)",marginBottom:24,lineHeight:1.6}}>Tu as déjà un compte ou c'est ta première visite ?</div>
-    <button onClick={()=>{reset();setMode("login");}} className="btn btn-w btn-lg" style={{width:"100%",marginBottom:10}}>Se connecter →</button>
-    <button onClick={()=>{reset();setMode("signup");}} className="btn btn-ghost btn-lg" style={{width:"100%"}}>Créer un compte</button>
-  </>);
-
-  // ── Login ──
-  if(mode==="login") return(<>
-    <button onClick={()=>{reset();setMode("choix");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
-    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:20}}>Connexion 🏐</div>
-    {err&&<div className="err-box">{err}</div>}
-    <div style={{marginBottom:10}}><label className="lbl">Email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
-    <div style={{marginBottom:8,position:"relative"}}>
-      <label className="lbl">Mot de passe *</label>
-      <div style={{position:"relative"}}>
-        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&handleLogin()} className="field" style={{paddingRight:44}}/>
-        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0}}>{showMdp?"🙈":"👁️"}</button>
-      </div>
-    </div>
-    <div style={{marginBottom:22,textAlign:"right"}}>
-      <span style={{fontSize:12,color:"var(--blue)",cursor:"pointer"}} onClick={()=>{reset();setMode("signup");}}>Pas encore de compte ? S'inscrire</span>
-    </div>
-    <button onClick={handleLogin} disabled={loading} className="btn btn-w btn-lg" style={{width:"100%"}}>{loading?"Connexion...":"Se connecter →"}</button>
-  </>);
-
-  // ── Signup ──
-  const mdpForce=mdp.length===0?0:mdp.length<6?1:mdp.length<10?2:3;
-  return(<>
-    <button onClick={()=>{reset();setMode("choix");}} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
-    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:20}}>Créer un compte 🏐</div>
-    {err&&<div className="err-box">{err}</div>}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-      <div><label className="lbl">Prénom *</label><input type="text" value={prenom} onChange={e=>{setPrenom(e.target.value);setErr("");}} placeholder="Jean-Paul" className="field"/></div>
-      <div><label className="lbl">Nom *</label><input type="text" value={nom} onChange={e=>{setNom(e.target.value);setErr("");}} placeholder="Dupont" className="field"/></div>
-    </div>
-    <div style={{marginBottom:10}}><label className="lbl">Email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
-    <div style={{marginBottom:10}}><label className="lbl">Ville</label><input type="text" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Saint-Denis, Saint-Pierre..." className="field"/></div>
-    <div style={{marginBottom:10}}>
-      <label className="lbl">Mot de passe *</label>
-      <div style={{position:"relative"}}>
-        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="Minimum 6 caractères" className="field" style={{paddingRight:44}}/>
-        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0}}>{showMdp?"🙈":"👁️"}</button>
-      </div>
-      {mdp.length>0&&(
-        <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}>
-          <div style={{flex:1,height:3,borderRadius:2,background:"var(--b2)",overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${[0,33,66,100][mdpForce]}%`,background:["transparent","var(--red)","var(--yellow)","var(--green)"][mdpForce],transition:"all 0.3s",borderRadius:2}}/>
-          </div>
-          <span style={{fontSize:11,color:["transparent","var(--red)","var(--yellow)","var(--green)"][mdpForce],fontWeight:600,minWidth:40}}>{["","Trop court","Correct","Fort"][mdpForce]}</span>
-        </div>
-      )}
-    </div>
-    <div style={{marginBottom:22}}>
-      <label className="lbl">Confirmer le mot de passe *</label>
-      <input type="password" value={mdp2} onChange={e=>{setMdp2(e.target.value);setErr("");}} placeholder="Répète ton mot de passe" onKeyDown={e=>e.key==="Enter"&&handleSignup()} className="field" style={{borderColor:mdp2&&mdp2!==mdp?"var(--red)":mdp2&&mdp2===mdp?"var(--green)":""}}/>
-      {mdp2&&<div style={{marginTop:5,fontSize:11,fontWeight:600,color:mdp2===mdp?"var(--green)":"var(--red)"}}>{mdp2===mdp?"✓ Identiques":"✕ Ne correspond pas"}</div>}
-    </div>
-    <button onClick={handleSignup} disabled={loading} className="btn btn-w btn-lg" style={{width:"100%"}}>{loading?"Création...":"Créer mon compte →"}</button>
-    <div style={{marginTop:12,textAlign:"center"}}>
-      <span style={{fontSize:12,color:"var(--blue)",cursor:"pointer"}} onClick={()=>{reset();setMode("login");}}>Déjà un compte ? Se connecter</span>
-    </div>
-  </>);
-}
 
 function VueOrganisateur({onBack,adhesions,setAdhesions,onDone}){
   const [prenom,setPrenom]=useState("");
@@ -552,13 +341,19 @@ function LoginAdmin({onLogin,onBack}){
 
 // ─── PANNEAU ADMIN ────────────────────────────────────────────────────────────
 function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTournois,adhesions,setAdhesions,getAllAdhesions,getAllJoueurs,onBack}){
-  // Charge les adhésions et joueurs dès l'ouverture du panneau admin
+  const [visitesStats,setVisitesStats]=useState(null);
+
   useEffect(()=>{
     async function loadAdmin(){
       try {
-        const [adh, jou] = await Promise.all([getAllAdhesions(), getAllJoueurs()]);
+        const [adh, jou, vis] = await Promise.all([
+          getAllAdhesions(),
+          getAllJoueurs(),
+          getVisitesStats(30),
+        ]);
         setAdhesions(adh);
         setInscrits(jou);
+        setVisitesStats(vis);
       } catch(e){ console.error("Admin load error:", e); }
     }
     loadAdmin();
@@ -617,9 +412,9 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
       </nav>
       <div style={{background:"var(--s1)",borderBottom:"1px solid var(--b1)"}}>
         <div style={{maxWidth:840,margin:"0 auto",padding:"0 16px",display:"flex"}}>
-          {[["adhesions","Adhésions"],["sponsors","Sponsors"],["tournois","Tournois"],["joueurs","Joueurs"]].map(([k,l])=>(
+          {[["adhesions","Adhésions"],["visites","Visites"],["sponsors","Sponsors"],["tournois","Tournois"],["joueurs","Joueurs"]].map(([k,l])=>(
             <button key={k} className={`adm-tab ${onglet===k?"on":""}`} onClick={()=>setOnglet(k)}>
-              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="adhesions"?nbEnAttente:k==="joueurs"?inscrits.length:k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
+              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="adhesions"?nbEnAttente:k==="visites"?(visitesStats?.moyenne||0):k==="joueurs"?inscrits.length:k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
             </button>
           ))}
         </div>
@@ -662,6 +457,57 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {onglet==="visites"&&(
+          <div>
+            <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.6,marginBottom:4}}>Statistiques de visites</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:24}}>30 derniers jours</div>
+
+            {/* Cards résumé */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,marginBottom:32}}>
+              {[
+                {label:"Visites totales",val:visitesStats?.total??"—",icon:"👁️"},
+                {label:"Moyenne / jour",val:visitesStats?.moyenne??"—",icon:"📈"},
+                {label:"Jours avec visites",val:visitesStats?.jours?.length??"—",icon:"📅"},
+              ].map(({label,val,icon})=>(
+                <div key={label} style={{background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:14,padding:"20px 18px"}}>
+                  <div style={{fontSize:26,marginBottom:8}}>{icon}</div>
+                  <div style={{fontSize:28,fontWeight:800,letterSpacing:-1,marginBottom:4}}>{val}</div>
+                  <div style={{fontSize:12,color:"var(--t3)",fontWeight:500}}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini graphe en barres */}
+            {visitesStats?.jours?.length>0?(
+              <div style={{background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:14,padding:"22px 20px"}}>
+                <div style={{fontSize:14,fontWeight:600,marginBottom:18}}>Visites par jour</div>
+                <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80,overflowX:"auto"}}>
+                  {(()=>{
+                    const max=Math.max(...visitesStats.jours.map(j=>j.nb),1);
+                    return visitesStats.jours.map(j=>(
+                      <div key={j.jour} title={`${j.jour} : ${j.nb} visites`}
+                        style={{flex:"0 0 auto",width:18,height:`${Math.max(4,(j.nb/max)*76)}px`,
+                          background:"var(--blue)",borderRadius:"4px 4px 0 0",cursor:"default",
+                          transition:"opacity 0.15s",opacity:0.8}}
+                        onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+                        onMouseLeave={e=>e.currentTarget.style.opacity="0.8"}/>
+                    ));
+                  })()}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:"var(--t4)"}}>
+                  <span>{visitesStats.jours[0]?.jour}</span>
+                  <span>{visitesStats.jours[visitesStats.jours.length-1]?.jour}</span>
+                </div>
+              </div>
+            ):(
+              <div style={{background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:14,padding:"48px",textAlign:"center"}}>
+                <div style={{fontSize:40,marginBottom:10}}>📊</div>
+                <div style={{color:"var(--t3)",fontSize:14}}>Pas encore de données de visites.<br/>Assure-toi que la table <code>visites</code> est créée dans Supabase.</div>
               </div>
             )}
           </div>
@@ -989,7 +835,7 @@ function SponsorBlock({sponsor,tier,showEmpty,index}){
 }
 
 // ─── PAGE CALENDRIER ──────────────────────────────────────────────────────────
-function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGoAdmin,onShowInscription,showEmpty}){
+function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGoAdmin,onShowOrga,showEmpty,visitesStats}){
   const today=new Date();
   const [annee,setAnnee]=useState(today.getFullYear());
   const [mois,setMois]=useState(today.getMonth());
@@ -1047,17 +893,17 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
             <button className="btn btn-w" onClick={()=>setShowForm(true)} style={{marginTop:6}}>+ Publier un tournoi</button>
           )}
           {currentUser.role==="joueur"&&(
-            <button className="btn btn-ghost" onClick={onShowInscription} style={{marginTop:6}}>Devenir organisateur</button>
+            <button className="btn btn-ghost" onClick={onShowOrga} style={{marginTop:6}}>Devenir organisateur</button>
           )}
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats pills */}
       <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap",justifyContent:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:7,background:"rgba(0,0,0,0.04)",borderRadius:50,padding:"6px 14px"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:"var(--green)",animation:"pulse 2s infinite"}}/>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{inscrits.length}</span>
-          <span style={{fontSize:12,color:"var(--t3)"}}>joueur(se)s actif(ve)s</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{visitesStats?.moyenne??"—"}</span>
+          <span style={{fontSize:12,color:"var(--t3)"}}>visites/jour</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:7,background:"rgba(0,0,0,0.04)",borderRadius:50,padding:"6px 14px"}}>
           <span style={{fontSize:12}}>🏆</span>
@@ -1293,7 +1139,7 @@ function PagePartenaires({onBack,tournois,inscrits}){
           sponsors={DUMMY_SPONSORS}
           inscrits={DUMMY_INSCRITS}
           onGoAdmin={()=>{}}
-          onShowInscription={()=>{}}
+          onShowOrga={()=>setShowOrga(true)}
           showEmpty={true}
         />
       </div>
@@ -1306,51 +1152,39 @@ function clamp(min,max){return `clamp(${min}px, 4vw, ${max}px)`;}
 export default function App(){
   const [showSplash,setShowSplash]=useState(true);
   const [page,setPage]=useState("home");
-  const [accesOK,setAccesOK]=useState(false);
   const [currentUser,setCurrentUser]=useState(null);
-  const [authChecked,setAuthChecked]=useState(false); // session vérifiée ?
+  const [authChecked,setAuthChecked]=useState(false);
   const [inscrits,setInscrits]=useState([]);
   const [sponsors,setSponsors]=useState(INIT_SP);
   const [tournois,setTournois]=useState([]);
-  const [showInscription,setShowInscription]=useState(false);
+  const [showOrga,setShowOrga]=useState(false); // modal organisateur
+  const [visitesStats,setVisitesStats]=useState(null);
   const [adhesions,setAdhesions]=useState([]);
   const [showPopup,setShowPopup]=useState(false);
 
-  // ── Session persistante + chargement initial ──────────────────────────────
+  // ── Chargement initial + session organisateur ────────────────────────────
   useEffect(()=>{
     if(window.location.hash==="#partenaires") setPage("partenaires");
 
-    // Charge les tournois publics (pas besoin d'être connecté)
+    // Tournois publics — visibles sans connexion
     getAllTournois().then(ts=>setTournois(ts)).catch(()=>{});
 
-    // Écoute les changements de session Auth (connexion / déconnexion / reload)
+    // Stats visites publiques
+    getVisitesStats(30).then(v=>setVisitesStats(v)).catch(()=>{});
+
+    // Compteur de visites
+    enregistrerVisite().catch(()=>{});
+
+    // Session organisateur persistante
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session)=>{
       if(session?.user){
-        // Utilisateur connecté → récupère son profil
         const email = session.user.email;
-        const meta  = session.user.user_metadata || {};
-        const role  = meta.role || "joueur";
-
-        if(role === "organisateur"){
-          try {
-            const orga = await getOrganisateurByEmail(email);
-            if(orga){ setCurrentUser({...orga, role:"organisateur"}); setAccesOK(true); }
-          } catch(e){ console.warn("Profil organisateur non trouvé", e); }
-        } else {
-          try {
-            let profil = await getJoueurByEmail(email);
-            if(!profil){
-              // Crée le profil s'il n'existe pas encore (cas signUp sans createJoueur)
-              profil = await createJoueur({ prenom: meta.prenom||"", nom: meta.nom||"", email, ville: meta.ville||"" });
-            }
-            setCurrentUser({...profil, role:"joueur"});
-            setAccesOK(true);
-          } catch(e){ console.warn("Profil joueur non trouvé", e); }
-        }
+        try {
+          const orga = await getOrganisateurByEmail(email);
+          if(orga) setCurrentUser({...orga, role:"organisateur"});
+        } catch(e){ console.warn(e); }
       } else {
-        // Pas de session → écran d'accueil
         setCurrentUser(null);
-        setAccesOK(false);
       }
       setAuthChecked(true);
     });
@@ -1358,37 +1192,23 @@ export default function App(){
     return () => subscription.unsubscribe();
   },[]);
 
-  // Chargement liste joueurs pour l'admin (séparé)
   async function loadInscrits(){ getAllJoueurs().then(js=>setInscrits(js)).catch(()=>{}); }
-
-  function handleIntro(v){ setCurrentUser(v); setAccesOK(true); }
 
   async function handleLogout(){
     await signOut();
     setCurrentUser(null);
-    setAccesOK(false);
   }
-
-  // Attend que la session soit vérifiée avant d'afficher l'UI
-  if(!authChecked && !showSplash) return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
-      <style>{CSS}</style>
-      <div style={{display:"flex",gap:7}}>
-        {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"var(--t3)",animation:`splDot 1.3s ease-in-out ${i*0.14}s infinite`}}/>)}
-      </div>
-    </div>
-  );
 
   if(showSplash) return <SplashScreen onDone={()=>setShowSplash(false)}/>;
   if(page==="partenaires") return <PagePartenaires onBack={()=>setPage("home")} tournois={tournois} inscrits={inscrits}/>;
   if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")}/>;
   if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>{loadInscrits();setPage("home");}}/>;
-  if(!accesOK) return <PageIntro onEnter={handleIntro} inscrits={inscrits} setInscrits={setInscrits} adhesions={adhesions} setAdhesions={setAdhesions}/>;
+
 
   return(
     <>
       <style>{CSS}</style>
-      {showInscription&&<ModalInscription onClose={()=>setShowInscription(false)}/>}
+      {showOrga&&<ModalOrganisateur onClose={()=>setShowOrga(false)} adhesions={adhesions} setAdhesions={setAdhesions}/>}
 
       {/* VIDEO POPUP */}
       {showPopup&&(
@@ -1432,7 +1252,7 @@ export default function App(){
               <button style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"6px 14px",borderRadius:980,fontFamily:"inherit",letterSpacing:-0.1,transition:"all 0.15s"}} onClick={()=>setPage("login")}
                 onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,0,0,0.08)";e.currentTarget.style.color="var(--t1)";}}
                 onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,0.04)";e.currentTarget.style.color="var(--t2)";}}>Admin</button>
-              {accesOK&&<button onClick={handleLogout} style={{background:"none",border:"none",color:"var(--t4)",fontSize:12,cursor:"pointer",padding:"5px 10px",borderRadius:980,fontFamily:"inherit",transition:"color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.color="var(--red)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>Déconnexion</button>}
+              {currentUser?.role==="organisateur"&&<button onClick={handleLogout} style={{background:"none",border:"none",color:"var(--t4)",fontSize:12,cursor:"pointer",padding:"5px 10px",borderRadius:980,fontFamily:"inherit",transition:"color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.color="var(--red)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>Déconnexion</button>}
             </div>
           </div>
         </nav>
@@ -1441,7 +1261,7 @@ export default function App(){
         <div style={{height:3,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:1}}/>
 
         {/* PAGES */}
-        {page==="home"&&<PageCalendrier tournois={tournois} setTournois={setTournois} currentUser={currentUser} sponsors={sponsors} inscrits={inscrits} onGoAdmin={()=>setPage("login")} onShowInscription={()=>setShowInscription(true)}/>}
+        {page==="home"&&<PageCalendrier tournois={tournois} setTournois={setTournois} currentUser={currentUser} sponsors={sponsors} inscrits={inscrits} onGoAdmin={()=>setPage("login")} onShowOrga={()=>setShowOrga(true)} visitesStats={visitesStats}/>}
         {page==="carte"&&<PageCarte tournois={tournois}/>}
       </div>
     </>

@@ -211,3 +211,40 @@ export async function signInJoueur(email, password) {
 
   return { ...data, profil: { ...profil, role: 'joueur' } };
 }
+
+// ══════════════════════════ VISITES ══════════════════════════════════════════
+
+/** Enregistre une visite pour aujourd'hui (upsert par jour). */
+export async function enregistrerVisite() {
+  if (!supabaseConfigured) return;
+  const aujourd_hui = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  // Tente d'insérer — si le jour existe déjà, incrémente nb
+  const { error } = await supabase.rpc('upsert_visite', { p_jour: aujourd_hui });
+  if (error) {
+    // Fallback si la RPC n'existe pas : insert simple
+    await supabase.from('visites').upsert({ jour: aujourd_hui, nb: 1 }, { onConflict: 'jour', ignoreDuplicates: false });
+  }
+}
+
+/** Retourne les visites des N derniers jours + moyenne/jour. */
+export async function getVisitesStats(nbJours = 30) {
+  if (!supabaseConfigured) return { total: 0, moyenne: 0, jours: [] };
+
+  const depuis = new Date();
+  depuis.setDate(depuis.getDate() - nbJours);
+  const depuisStr = depuis.toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('visites')
+    .select('jour, nb')
+    .gte('jour', depuisStr)
+    .order('jour', { ascending: true });
+
+  if (error) return { total: 0, moyenne: 0, jours: [] };
+
+  const jours = data || [];
+  const total = jours.reduce((s, v) => s + v.nb, 0);
+  const moyenne = jours.length > 0 ? Math.round(total / nbJours) : 0;
+
+  return { total, moyenne, jours };
+}

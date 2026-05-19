@@ -94,8 +94,24 @@ export async function getAllAdhesions() {
 
 export async function validerAdhesion(adhesionId) {
   if (!supabaseConfigured) return;
-  const { error } = await supabase.functions.invoke('valider-adhesion', { body: { adhesion_id: adhesionId } });
-  if (error) throw error;
+
+  // 1. Récupère la demande
+  const { data: dem, error: e1 } = await supabase
+    .from('adhesions').select('*').eq('id', adhesionId).single();
+  if (e1 || !dem) throw new Error('Demande introuvable');
+
+  // 2. Insère dans organisateurs (ignore si email déjà existant)
+  const { error: e2 } = await supabase
+    .from('organisateurs')
+    .upsert({ prenom: dem.prenom, nom: dem.nom, association: dem.association, email: dem.email }, { onConflict: 'email' });
+  if (e2) throw e2;
+
+  // 3. Met à jour le statut → validee
+  const { error: e3 } = await supabase
+    .from('adhesions')
+    .update({ statut: 'validee', mdp_tmp: '', updated_at: new Date().toISOString() })
+    .eq('id', adhesionId);
+  if (e3) throw e3;
 }
 
 export async function refuserAdhesion(adhesionId) {

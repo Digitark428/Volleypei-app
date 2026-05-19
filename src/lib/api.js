@@ -33,8 +33,22 @@ export async function getAllJoueurs() {
 
 export async function signInOrganisateur(email, password) {
   if (!supabaseConfigured) throw new Error('Supabase non configuré');
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email.toLowerCase().trim(), password });
+  // Connexion directe via la table organisateurs (sans Supabase Auth)
+  const { data, error } = await supabase
+    .from('organisateurs')
+    .select('*')
+    .eq('email', email.toLowerCase().trim())
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('COMPTE_INTROUVABLE');
+  // Vérifie le mot de passe (stocké dans mdp_tmp via adhesions)
+  const { data: adh } = await supabase
+    .from('adhesions')
+    .select('mdp_tmp')
+    .eq('email', email.toLowerCase().trim())
+    .eq('statut', 'validee')
+    .maybeSingle();
+  if (!adh || adh.mdp_tmp !== password) throw new Error('MOT_DE_PASSE_INCORRECT');
   return data;
 }
 

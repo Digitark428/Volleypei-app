@@ -381,15 +381,13 @@ function VueConnexionOrga({onBack, onEnter}){
     if(!email.trim()||!mdp){setErr("Email et mot de passe requis.");return;}
     setErr(""); setLoading(true);
     try {
-      await signInOrganisateur(email, mdp);
-      const orga = await getOrganisateurByEmail(email);
-      if(!orga){setErr("Compte introuvable. Votre demande est peut-être en attente.");setLoading(false);return;}
+      const orga = await signInOrganisateur(email, mdp);
       setNom(orga.prenom);
       setWelcome(true);
       setTimeout(()=>onEnter({...orga, role:"organisateur"}), 1500);
     } catch(e){
-      if(e.message?.includes("Invalid login credentials")) setErr("Email ou mot de passe incorrect.");
-      else if(e.message?.includes("Email not confirmed")) setErr("Compte non encore activé.");
+      if(e.message==="COMPTE_INTROUVABLE") setErr("Compte introuvable. Votre demande est peut-être en attente de validation.");
+      else if(e.message==="MOT_DE_PASSE_INCORRECT") setErr("Mot de passe incorrect.");
       else setErr("Email ou mot de passe incorrect.");
       setLoading(false);
     }

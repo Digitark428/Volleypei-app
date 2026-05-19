@@ -177,6 +177,58 @@ html,body{background:var(--bg);font-family:'SF Pro Display','SF Pro Text','Inter
 `;
 
 // ─── SPLASH SCREEN ────────────────────────────────────────────────────────────
+// ─── PAGE INTRO ───────────────────────────────────────────────────────────────
+function PageIntro({onVisiteur, onOrganisateur}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:100,fontFamily:"Inter,-apple-system,sans-serif",padding:"0 24px"}}>
+      <style>{CSS}</style>
+      <div style={{position:"absolute",top:0,left:0,right:0}}><div className="strip"/></div>
+      <div style={{position:"absolute",width:600,height:600,borderRadius:"50%",background:"radial-gradient(circle,rgba(37,99,235,0.06) 0%,transparent 65%)",pointerEvents:"none"}}/>
+
+      <div style={{width:"100%",maxWidth:380,position:"relative"}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <img src={LOGO_B64} alt="VolleyPéi" style={{width:72,height:72,borderRadius:18,margin:"0 auto 16px",display:"block",boxShadow:"0 8px 28px rgba(37,99,235,0.2)"}}/>
+          <div style={{fontSize:22,fontWeight:800,letterSpacing:-0.6,color:"var(--t1)",marginBottom:6}}>VolleyPéi</div>
+          <div style={{fontSize:14,color:"var(--t3)",lineHeight:1.5}}>Le calendrier du volley péi 🏐</div>
+        </div>
+
+        {/* Choix */}
+        <div style={{marginBottom:12}}>
+          <div
+            onClick={onVisiteur}
+            style={{display:"flex",alignItems:"center",gap:14,background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:16,padding:"18px 20px",cursor:"pointer",transition:"all 0.15s",marginBottom:10}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(37,99,235,0.1)";e.currentTarget.style.borderColor="rgba(37,99,235,0.3)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";e.currentTarget.style.borderColor="var(--b1)";}}>
+            <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#2563eb,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏐</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:3}}>Accéder en tant que visiteur</div>
+              <div style={{fontSize:12,color:"var(--t3)"}}>Consulter le calendrier des tournois</div>
+            </div>
+            <span style={{color:"var(--t3)",fontSize:18}}>→</span>
+          </div>
+
+          <div
+            onClick={onOrganisateur}
+            style={{display:"flex",alignItems:"center",gap:14,background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:16,padding:"18px 20px",cursor:"pointer",transition:"all 0.15s"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 6px 20px rgba(251,191,36,0.12)";e.currentTarget.style.borderColor="rgba(251,191,36,0.4)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";e.currentTarget.style.borderColor="var(--b1)";}}>
+            <div style={{width:46,height:46,borderRadius:12,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🏆</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                <span style={{fontSize:15,fontWeight:700,color:"var(--t1)"}}>Espace organisateur</span>
+                <span style={{background:"rgba(251,191,36,0.15)",color:"#d97706",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,letterSpacing:0.5}}>VALIDATION</span>
+              </div>
+              <div style={{fontSize:12,color:"var(--t3)"}}>Publier et gérer vos tournois</div>
+            </div>
+            <span style={{color:"var(--t3)",fontSize:18}}>→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SplashScreen({onDone}){
   const [out,setOut]=useState(false);
   useEffect(()=>{
@@ -185,22 +237,22 @@ function SplashScreen({onDone}){
     return()=>{clearTimeout(t1);clearTimeout(t2);};
   },[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#000",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,opacity:out?0:1,transition:"opacity 500ms cubic-bezier(0.22,1,0.36,1)",fontFamily:"Inter,-apple-system,sans-serif"}}>
+    <div style={{position:"fixed",inset:0,background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,opacity:out?0:1,transition:"opacity 500ms cubic-bezier(0.22,1,0.36,1)",fontFamily:"Inter,-apple-system,sans-serif"}}>
       <style>{CSS}</style>
-      <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(37,99,235,0.12) 0%,transparent 70%)",animation:"splLogo 1.2s ease both"}}/>
+      <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(37,99,235,0.08) 0%,transparent 70%)",animation:"splLogo 1.2s ease both"}}/>
       <div style={{position:"absolute",top:0,left:0,right:0}}>
         <div className="strip"/>
       </div>
       <div style={{position:"relative",animation:"splLogo 0.9s cubic-bezier(0.22,1,0.36,1) both"}}>
-        <img src={LOGO_B64} alt="VolleyPéi" style={{width:96,height:96,borderRadius:22,boxShadow:"0 16px 48px rgba(37,99,235,0.25),0 0 0 1px rgba(255,255,255,0.08)",position:"relative",zIndex:2}}/>
+        <img src={LOGO_B64} alt="VolleyPéi" style={{width:96,height:96,borderRadius:22,boxShadow:"0 16px 48px rgba(37,99,235,0.25)",position:"relative",zIndex:2}}/>
         <div style={{position:"absolute",inset:0,borderRadius:22,overflow:"hidden",zIndex:3}}>
-          <div style={{position:"absolute",top:0,bottom:0,left:0,width:"35%",background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)",animation:"splFlare 2s ease 0.8s both"}}/>
+          <div style={{position:"absolute",top:0,bottom:0,left:0,width:"35%",background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)",animation:"splFlare 2s ease 0.8s both"}}/>
         </div>
       </div>
-      <div style={{marginTop:24,fontSize:22,fontWeight:800,letterSpacing:-0.6,animation:"splTxt 0.6s ease 0.5s both"}}>VolleyPéi</div>
-      <div style={{marginTop:6,fontSize:13,color:"#6e6e73",animation:"splTxt 0.6s ease 0.7s both"}}>Le calendrier du volley péi 🏐</div>
+      <div style={{marginTop:24,fontSize:22,fontWeight:800,letterSpacing:-0.6,color:"var(--t1)",animation:"splTxt 0.6s ease 0.5s both"}}>VolleyPéi</div>
+      <div style={{marginTop:6,fontSize:13,color:"var(--t3)",animation:"splTxt 0.6s ease 0.7s both"}}>Le calendrier du volley péi 🏐</div>
       <div style={{marginTop:36,display:"flex",gap:7,animation:"splTxt 0.6s ease 0.9s both"}}>
-        {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"rgba(255,255,255,0.25)",animation:`splDot 1.3s ease-in-out ${i*0.14}s infinite`}}/>)}
+        {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"var(--t4)",animation:`splDot 1.3s ease-in-out ${i*0.14}s infinite`}}/>)}
       </div>
     </div>
   );
@@ -1151,6 +1203,7 @@ function clamp(min,max){return `clamp(${min}px, 4vw, ${max}px)`;}
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App(){
   const [showSplash,setShowSplash]=useState(true);
+  const [showIntro,setShowIntro]=useState(true); // choix visiteur/organisateur
   const [page,setPage]=useState("home");
   const [currentUser,setCurrentUser]=useState(null);
   const [authChecked,setAuthChecked]=useState(false);
@@ -1200,6 +1253,7 @@ export default function App(){
   }
 
   if(showSplash) return <SplashScreen onDone={()=>setShowSplash(false)}/>;
+  if(showIntro) return <PageIntro onVisiteur={()=>setShowIntro(false)} onOrganisateur={()=>{setShowIntro(false);setShowOrga(true);}}/>;
   if(page==="partenaires") return <PagePartenaires onBack={()=>setPage("home")} tournois={tournois} inscrits={inscrits}/>;
   if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")}/>;
   if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>{loadInscrits();setPage("home");}}/>;

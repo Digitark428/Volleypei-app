@@ -8,8 +8,8 @@ import {
   getOrganisateurByEmail,
   soumettreDemande,
   getAllAdhesions,
-  validerAdhesion,
-  refuserAdhesion,
+  validerAdhesion as apiValiderAdhesion,
+  refuserAdhesion as apiRefuserAdhesion,
   getAllTournois,
   createTournoi,
   deleteTournoi,
@@ -425,7 +425,7 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
   }
   async function validerAdhesion(id){
     try {
-      await validerAdhesion(id);
+      await apiValiderAdhesion(id);
       // Recharge les adhésions depuis Supabase
       const updated = await getAllAdhesions();
       setAdhesions(updated);
@@ -437,7 +437,7 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
   async function refuserAdhesion(id){
     if(!window.confirm("Refuser cette demande ?")) return;
     try {
-      await refuserAdhesion(id);
+      await apiRefuserAdhesion(id);
       setAdhesions(prev=>prev.map(a=>a.id===id?{...a,statut:"refusee"}:a));
     } catch(e) {
       alert("Erreur : " + e.message);

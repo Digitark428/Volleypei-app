@@ -282,7 +282,7 @@ function ModalOrganisateur({onClose,adhesions,setAdhesions}){
         )}
 
         {vue==="demande"&&<VueOrganisateur onBack={()=>setVue("choix")} adhesions={adhesions} setAdhesions={setAdhesions} onDone={()=>setVue("confirm")}/>}
-        {vue==="connexion"&&<VueConnexionOrga onBack={()=>setVue("choix")} adhesions={adhesions} onEnter={(u)=>{onClose();}} />}
+        {vue==="connexion"&&<VueConnexionOrga onBack={()=>setVue("choix")} onEnter={(u)=>{onClose(); if(u) window.dispatchEvent(new CustomEvent("orga-login", {detail:u}));}} />}
 
         {vue==="confirm"&&(
           <div style={{textAlign:"center",padding:"8px 0"}}>
@@ -364,6 +364,62 @@ function VueOrganisateur({onBack,adhesions,setAdhesions,onDone}){
     </div>
     <button onClick={envoyer} className="btn btn-w btn-lg" style={{width:"100%"}}>Envoyer ma demande →</button>
     <p style={{fontSize:11,color:"var(--t4)",textAlign:"center",marginTop:12}}>Votre demande sera traitée sous 24-48h</p>
+  </>);
+}
+
+// ─── VUE CONNEXION ORGANISATEUR ──────────────────────────────────────────────
+function VueConnexionOrga({onBack, onEnter}){
+  const [email,setEmail]=useState("");
+  const [mdp,setMdp]=useState("");
+  const [showMdp,setShowMdp]=useState(false);
+  const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [welcome,setWelcome]=useState(false);
+  const [nom,setNom]=useState("");
+
+  async function connecter(){
+    if(!email.trim()||!mdp){setErr("Email et mot de passe requis.");return;}
+    setErr(""); setLoading(true);
+    try {
+      await signInOrganisateur(email, mdp);
+      const orga = await getOrganisateurByEmail(email);
+      if(!orga){setErr("Compte introuvable. Votre demande est peut-être en attente.");setLoading(false);return;}
+      setNom(orga.prenom);
+      setWelcome(true);
+      setTimeout(()=>onEnter({...orga, role:"organisateur"}), 1500);
+    } catch(e){
+      if(e.message?.includes("Invalid login credentials")) setErr("Email ou mot de passe incorrect.");
+      else if(e.message?.includes("Email not confirmed")) setErr("Compte non encore activé.");
+      else setErr("Email ou mot de passe incorrect.");
+      setLoading(false);
+    }
+  }
+
+  if(welcome) return(
+    <div style={{textAlign:"center",padding:"16px 0"}}>
+      <div style={{fontSize:40,marginBottom:12}}>🏆</div>
+      <div style={{fontSize:15,fontWeight:300,color:"var(--t2)",marginBottom:4}}>Bienvenue,</div>
+      <div style={{fontSize:24,fontWeight:800,letterSpacing:-0.8,marginBottom:16}}>{nom}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+        <div style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",animation:"pulse 1.2s infinite"}}/>
+        <span style={{fontSize:12,color:"var(--t3)"}}>Connexion en cours...</span>
+      </div>
+    </div>
+  );
+
+  return(<>
+    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,cursor:"pointer",marginBottom:18,padding:0,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>← Retour</button>
+    <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.3,marginBottom:20}}>Connexion organisateur 🏆</div>
+    {err&&<div className="err-box">{err}</div>}
+    <div style={{marginBottom:10}}><label className="lbl">Email *</label><input type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="votre@email.com" className="field" style={{fontSize:16}}/></div>
+    <div style={{marginBottom:24}}>
+      <label className="lbl">Mot de passe *</label>
+      <div style={{position:"relative"}}>
+        <input type={showMdp?"text":"password"} value={mdp} onChange={e=>{setMdp(e.target.value);setErr("");}} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&connecter()} className="field" style={{paddingRight:44}}/>
+        <button type="button" onClick={()=>setShowMdp(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--t3)",padding:0}}>{showMdp?"🙈":"👁️"}</button>
+      </div>
+    </div>
+    <button onClick={connecter} disabled={loading} className="btn btn-w btn-lg" style={{width:"100%"}}>{loading?"Connexion...":"Se connecter →"}</button>
   </>);
 }
 
@@ -937,16 +993,19 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
       )}
 
       {/* Salutation - hero style Apple */}
-      {currentUser&&(
-        <div style={{textAlign:"center",padding:"32px 0 28px",position:"relative"}}>
-          <div style={{fontSize:13,fontWeight:500,color:"var(--t3)",letterSpacing:-0.1,marginBottom:6}}>Salut {currentUser.prenom} 👋</div>
-          <div style={{fontSize:11,color:"var(--t4)",letterSpacing:1.2,textTransform:"uppercase",fontWeight:600,marginBottom:14}}>{currentUser.role==="organisateur"?"Organisateur":"Joueur"}</div>
-          {currentUser.role==="organisateur"&&(
-            <button className="btn btn-w" onClick={()=>setShowForm(true)} style={{marginTop:6}}>+ Publier un tournoi</button>
-          )}
-          {currentUser.role==="joueur"&&(
-            <button className="btn btn-ghost" onClick={onShowOrga} style={{marginTop:6}}>Devenir organisateur</button>
-          )}
+      {/* Bouton publier pour organisateur connecté */}
+      {currentUser?.role==="organisateur"&&(
+        <div style={{textAlign:"center",padding:"24px 0 20px"}}>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--t3)",marginBottom:4}}>Salut {currentUser.prenom} 👋</div>
+          <div style={{fontSize:11,color:"var(--t4)",letterSpacing:1.2,textTransform:"uppercase",fontWeight:600,marginBottom:14}}>Organisateur</div>
+          <button className="btn btn-w" onClick={()=>setShowForm(true)} style={{width:"100%"}}>+ Publier un tournoi</button>
+        </div>
+      )}
+
+      {/* Bouton devenir organisateur pour visiteur non connecté */}
+      {!currentUser&&(
+        <div style={{textAlign:"center",padding:"16px 0 20px"}}>
+          <button className="btn btn-ghost" onClick={onShowOrga} style={{width:"100%",fontSize:13}}>🏆 Espace organisateur</button>
         </div>
       )}
 
@@ -1228,6 +1287,12 @@ export default function App(){
     // Compteur de visites
     enregistrerVisite().catch(()=>{});
 
+    // Écoute connexion organisateur depuis la modal
+    const handleOrgaLogin = (e) => {
+      if(e.detail){ setCurrentUser(e.detail); }
+    };
+    window.addEventListener("orga-login", handleOrgaLogin);
+
     // Session organisateur persistante
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session)=>{
       if(session?.user){
@@ -1242,7 +1307,7 @@ export default function App(){
       setAuthChecked(true);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); window.removeEventListener("orga-login", handleOrgaLogin); };
   },[]);
 
   async function loadInscrits(){ getAllJoueurs().then(js=>setInscrits(js)).catch(()=>{}); }

@@ -10,6 +10,7 @@ import {
   getAllAdhesions,
   validerAdhesion as apiValiderAdhesion,
   refuserAdhesion as apiRefuserAdhesion,
+  supprimerAdhesion as apiSupprimerAdhesion,
   getAllTournois,
   createTournoi,
   deleteTournoi,
@@ -28,7 +29,15 @@ const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août"
 const MC = ["JAN","FÉV","MAR","AVR","MAI","JUN","JUL","AOÛ","SEP","OCT","NOV","DÉC"];
 const TTYPES = ["Beach Volley","Green Volley","Volley Indoor","Mixte","Loisir"];
 
-const INIT_SP = Array.from({length:6},(_,i)=>({id:i+1,slot:"Emplacement "+(i+1),nom:"",texte:"",image:null,actif:false,siteWeb:"",instagram:"",facebook:"",whatsapp:""}));
+const SPONSOR_SLOTS = [
+  "Emplacement Gold",
+  "Emplacement Silver 1",
+  "Emplacement Silver 2",
+  "Emplacement Bronze 1",
+  "Emplacement Bronze 2",
+  "Emplacement Bronze 3",
+];
+const INIT_SP = Array.from({length:6},(_,i)=>({id:i+1,slot:SPONSOR_SLOTS[i],nom:"",texte:"",image:null,actif:false,siteWeb:"",instagram:"",facebook:"",whatsapp:""}));
 
 // ── SITE VIERGE — chaque utilisateur démarre à zéro ──
 // Les tournois sont créés via "Publier un tournoi" (organisateurs)
@@ -422,7 +431,7 @@ function VueConnexionOrga({onBack, onEnter}){
 }
 
 // ─── LOGIN ADMIN ──────────────────────────────────────────────────────────────
-function LoginAdmin({onLogin,onBack}){
+function LoginAdmin({onLogin,onBack,onRetourAccueil}){
   const [u,setU]=useState(""); const [p,setP]=useState(""); const [err,setErr]=useState(false);
   function go(){if(u===AU&&p===AP){onLogin();}else{setErr(true);setTimeout(()=>setErr(false),2000);}}
   return(
@@ -436,17 +445,18 @@ function LoginAdmin({onLogin,onBack}){
           <div style={{fontSize:13,color:"var(--t3)",marginTop:3}}>VolleyPéi</div>
         </div>
         {err&&<div className="err-box" style={{textAlign:"center"}}>Identifiants incorrects</div>}
-        <div style={{marginBottom:12}}><label className="lbl">Identifiant</label><input type="text" value={u} onChange={e=>setU(e.target.value)} className="field" placeholder="kevinjuju" onKeyDown={e=>e.key==="Enter"&&go()}/></div>
-        <div style={{marginBottom:22}}><label className="lbl">Mot de passe</label><input type="password" value={p} onChange={e=>setP(e.target.value)} className="field" placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&go()}/></div>
+        <div style={{marginBottom:12}}><label className="lbl">Identifiant</label><input type="text" value={u} onChange={e=>setU(e.target.value)} className="field" placeholder="" onKeyDown={e=>e.key==="Enter"&&go()}/></div>
+        <div style={{marginBottom:22}}><label className="lbl">Mot de passe</label><input type="password" value={p} onChange={e=>setP(e.target.value)} className="field" placeholder="" onKeyDown={e=>e.key==="Enter"&&go()}/></div>
         <button className="btn btn-w" onClick={go} style={{width:"100%",padding:"13px",fontSize:15}}>Se connecter</button>
         <button onClick={onBack} className="btn btn-ghost" style={{width:"100%",marginTop:9,padding:"12px"}}>← Retour</button>
+        {onRetourAccueil&&<button onClick={onRetourAccueil} className="btn btn-ghost" style={{width:"100%",marginTop:6,padding:"12px",fontSize:12,color:"var(--t3)"}}>⌂ Retour à l'accueil</button>}
       </div>
     </div>
   );
 }
 
 // ─── PANNEAU ADMIN ────────────────────────────────────────────────────────────
-function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTournois,adhesions,setAdhesions,getAllAdhesions,getAllJoueurs,onBack}){
+function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTournois,adhesions,setAdhesions,getAllAdhesions,getAllJoueurs,onBack,onRetourAccueil}){
   const [visitesStats,setVisitesStats]=useState(null);
 
   useEffect(()=>{
@@ -498,6 +508,16 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
       console.error(e);
     }
   }
+  async function supprimerAdhesion(id){
+    if(!window.confirm("Supprimer définitivement cette demande ? Toutes les données liées seront effacées.")) return;
+    try {
+      await apiSupprimerAdhesion(id);
+      setAdhesions(prev=>prev.filter(a=>a.id!==id));
+    } catch(e) {
+      alert("Erreur lors de la suppression : " + e.message);
+      console.error(e);
+    }
+  }
   const nbEnAttente=adhesions.filter(a=>a.statut==="en_attente").length;
 
   return(
@@ -512,15 +532,16 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             {saved&&<span style={{fontSize:12,color:"var(--green)",fontWeight:500}}>✓ Sauvegardé</span>}
             {onglet==="sponsors"&&<button className="btn btn-w btn-sm" onClick={save}>Sauvegarder</button>}
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Accueil</button>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Calendrier</button>
+            <button className="btn btn-ghost btn-sm" onClick={onRetourAccueil} style={{color:"var(--t3)"}}>⌂ Accueil</button>
           </div>
         </div>
       </nav>
       <div style={{background:"var(--s1)",borderBottom:"1px solid var(--b1)"}}>
         <div style={{maxWidth:840,margin:"0 auto",padding:"0 16px",display:"flex"}}>
-          {[["adhesions","Adhésions"],["visites","Visites"],["sponsors","Sponsors"],["tournois","Tournois"],["joueurs","Joueurs"]].map(([k,l])=>(
+          {[["adhesions","Adhésions"],["visites","Visites"],["sponsors","Sponsors"],["tournois","Tournois"]].map(([k,l])=>(
             <button key={k} className={`adm-tab ${onglet===k?"on":""}`} onClick={()=>setOnglet(k)}>
-              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="adhesions"?nbEnAttente:k==="visites"?(visitesStats?.moyenne||0):k==="joueurs"?inscrits.length:k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
+              {l}<span className={`adm-badge ${onglet===k?"on":""}`}>{k==="adhesions"?nbEnAttente:k==="visites"?(visitesStats?.moyenne||0):k==="tournois"?tournois.length:sponsors.filter(s=>s.actif).length}</span>
             </button>
           ))}
         </div>
@@ -560,6 +581,9 @@ function PanneauAdmin({sponsors,setSponsors,inscrits,setInscrits,tournois,setTou
                       </>)}
                       {a.statut==="validee"&&<span style={{background:"rgba(48,166,83,0.1)",color:"var(--green)",borderRadius:980,padding:"6px 14px",fontSize:12,fontWeight:600}}>✓ Validée</span>}
                       {a.statut==="refusee"&&<span style={{background:"rgba(227,0,0,0.07)",color:"var(--red)",borderRadius:980,padding:"6px 14px",fontSize:12,fontWeight:600}}>✕ Refusée</span>}
+                      <button onClick={()=>supprimerAdhesion(a.id)} title="Supprimer définitivement" style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t3)",borderRadius:980,padding:"8px 10px",fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",marginLeft:2}}
+                        onMouseEnter={e=>{e.currentTarget.style.background="rgba(227,0,0,0.1)";e.currentTarget.style.color="var(--red)";}}
+                        onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,0.04)";e.currentTarget.style.color="var(--t3)";}}>🗑️</button>
                     </div>
                   </div>
                 ))}
@@ -733,8 +757,8 @@ function ModalTournoi({tournoi,onClose}){
 }
 
 // ─── MODAL FORM TOURNOI ───────────────────────────────────────────────────────
-function ModalFormTournoi({onClose,onSubmit,tournois}){
-  const [form,setForm]=useState({nom:"",date:"",heure:"",lieu:"",ville:"",type:"Beach Volley",joueurs:"",contact:"",organisateur:"",description:"",affiche:null,lat:"",lng:""});
+function ModalFormTournoi({onClose,onSubmit,tournois,initialDate}){
+  const [form,setForm]=useState({nom:"",date:initialDate||"",heure:"",lieu:"",ville:"",type:"Beach Volley",joueurs:"",contact:"",organisateur:"",description:"",affiche:null,lat:"",lng:""});
   const [err,setErr]=useState("");
   const [warnDoublon,setWarnDoublon]=useState(null);
 
@@ -759,17 +783,30 @@ function ModalFormTournoi({onClose,onSubmit,tournois}){
     await doSubmit();
   }
 
+  const [success,setSuccess]=useState(false);
+
   async function doSubmit(){
     setUploading(true);
+    setErr("");
     try {
       // On passe le File brut à onSubmit → createTournoi s'occupe de l'upload
-      onSubmit({...form, lat:parseFloat(form.lat)||null, lng:parseFloat(form.lng)||null}, afficheFile||null);
+      await onSubmit({...form, lat:parseFloat(form.lat)||null, lng:parseFloat(form.lng)||null}, afficheFile||null);
+      setSuccess(true);
     } catch(e) {
       setErr("Erreur : "+e.message);
-    } finally {
       setUploading(false);
     }
   }
+
+  if(success) return(
+    <div className="overlay">
+      <div className="modal" style={{maxWidth:380,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:64,height:64,background:"rgba(48,209,88,0.1)",border:"1px solid rgba(48,209,88,0.25)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 18px"}}>✅</div>
+        <div style={{fontSize:18,fontWeight:700,letterSpacing:-0.4,marginBottom:8}}>Tournoi publié !</div>
+        <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.6}}>Votre tournoi est maintenant visible sur le calendrier.</div>
+      </div>
+    </div>
+  );
 
   if(warnDoublon) return(
     <div className="overlay" onClick={()=>setWarnDoublon(null)}>
@@ -948,6 +985,7 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
   const [selected,setSelected]=useState(null);
   const [showDetail,setShowDetail]=useState(null);
   const [showForm,setShowForm]=useState(false);
+  const [preselectedDate,setPreselectedDate]=useState(null);
   const [nextId,setNextId]=useState(100);
   const jours=gj(annee,mois);
   const tbd={};
@@ -973,7 +1011,7 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
   return(
     <div style={{maxWidth:800,margin:"0 auto",padding:"28px 16px 60px"}}>
       {showDetail&&<ModalTournoi tournoi={showDetail} onClose={()=>setShowDetail(null)}/>}
-      {showForm&&<ModalFormTournoi tournois={tournois} onClose={()=>setShowForm(false)} onSubmit={async (form, afficheFile)=>{
+      {showForm&&<ModalFormTournoi tournois={tournois} onClose={()=>{setShowForm(false);setPreselectedDate(null);}} initialDate={preselectedDate} onSubmit={async (form, afficheFile)=>{
         try {
           const t = await createTournoi(form, afficheFile, currentUser?.email||"");
           setTournois(prev=>[...prev, t]);
@@ -1047,7 +1085,13 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
             const it=d===today.toISOString().slice(0,10);
             const is=d===selected;
             return(
-              <div key={i} className={`cal-cell${is?" sel":""}`} onClick={()=>jour&&setSelected(d===selected?null:d)}>
+              <div key={i} className={`cal-cell${is?" sel":""}`} onClick={()=>{
+                if(!jour) return;
+                setSelected(d===selected?null:d);
+                if(currentUser?.role==="organisateur"&&d!==selected){
+                  // Show "Ajouter ici" hint — handled below
+                }
+              }}>
                 {jour&&(<>
                   <div className={`cal-num${it?" td":""}`}>{jour}</div>
                   {ht&&<div style={{display:"flex",flexWrap:"wrap",gap:1,marginTop:1}}>{tbd[d].map((_,ti)=><div key={ti} className="cal-dot"/>)}</div>}
@@ -1077,6 +1121,29 @@ function PageCalendrier({tournois,setTournois,currentUser,sponsors,inscrits,onGo
             `Aucun tournoi le ${selected.split("-").reverse().join("/")}`}
           </div>
           <button onClick={()=>setSelected(null)} className="link link-sm">Tout voir</button>
+        </div>
+      )}
+      {/* Bouton "Ajouter un tournoi ici" pour organisateur connecté */}
+      {selected&&currentUser?.role==="organisateur"&&(
+        <div style={{marginBottom:16}}>
+          <button
+            onClick={()=>{
+              // Pré-sélectionner la date dans le form
+              setShowForm(true);
+              // On stocke la date pré-sélectionnée dans un état dédié
+              setPreselectedDate(selected);
+            }}
+            style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:"rgba(0,102,204,0.06)",border:"1.5px dashed rgba(0,102,204,0.3)",borderRadius:14,padding:"14px 18px",cursor:"pointer",transition:"all 0.18s",fontFamily:"inherit"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,102,204,0.1)";e.currentTarget.style.borderColor="rgba(0,102,204,0.5)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,102,204,0.06)";e.currentTarget.style.borderColor="rgba(0,102,204,0.3)";}}>
+            <div style={{width:34,height:34,borderRadius:9,background:"var(--blue)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span style={{color:"white",fontSize:18,lineHeight:1}}>+</span>
+            </div>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--blue)"}}>Ajouter un tournoi ici</div>
+              <div style={{fontSize:11,color:"var(--t3)",marginTop:1}}>Le {selected.split("-").reverse().join("/")}</div>
+            </div>
+          </button>
         </div>
       )}
       {!selected&&displayT.length>0&&(
@@ -1318,9 +1385,8 @@ export default function App(){
   if(showSplash) return <SplashScreen onDone={()=>setShowSplash(false)}/>;
   if(showIntro) return <PageIntro onVisiteur={()=>setShowIntro(false)} onOrganisateur={()=>{setShowIntro(false);setShowOrga(true);}}/>;
   if(page==="partenaires") return <PagePartenaires onBack={()=>setPage("home")} tournois={tournois} inscrits={inscrits}/>;
-  if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")}/>;
-  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>{loadInscrits();setPage("home");}}/>;
-
+  if(page==="login") return <LoginAdmin onLogin={()=>setPage("admin")} onBack={()=>setPage("home")} onRetourAccueil={()=>{setPage("home");setShowIntro(true);setCurrentUser(null);signOut().catch(()=>{})}}/>;
+  if(page==="admin") return <PanneauAdmin sponsors={sponsors} setSponsors={setSponsors} inscrits={inscrits} setInscrits={setInscrits} tournois={tournois} setTournois={setTournois} adhesions={adhesions} setAdhesions={setAdhesions} getAllAdhesions={getAllAdhesions} getAllJoueurs={getAllJoueurs} onBack={()=>{loadInscrits();setPage("home");}} onRetourAccueil={()=>{setPage("home");setShowIntro(true);setCurrentUser(null);signOut().catch(()=>{});}}/>;
 
   return(
     <>
@@ -1369,6 +1435,10 @@ export default function App(){
               <button style={{background:"rgba(0,0,0,0.04)",border:"none",color:"var(--t2)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"6px 14px",borderRadius:980,fontFamily:"inherit",letterSpacing:-0.1,transition:"all 0.15s"}} onClick={()=>setPage("login")}
                 onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,0,0,0.08)";e.currentTarget.style.color="var(--t1)";}}
                 onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,0.04)";e.currentTarget.style.color="var(--t2)";}}>Admin</button>
+              <button style={{background:"none",border:"none",color:"var(--t3)",fontSize:12,fontWeight:500,cursor:"pointer",padding:"5px 11px",borderRadius:7,fontFamily:"inherit",letterSpacing:-0.1,transition:"color 0.15s"}}
+                onClick={()=>{setShowIntro(true);setCurrentUser(null);signOut().catch(()=>{});}}
+                onMouseEnter={e=>e.currentTarget.style.color="var(--t1)"}
+                onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>⌂ Accueil</button>
               {currentUser?.role==="organisateur"&&<button onClick={handleLogout} style={{background:"none",border:"none",color:"var(--t4)",fontSize:12,cursor:"pointer",padding:"5px 10px",borderRadius:980,fontFamily:"inherit",transition:"color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.color="var(--red)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>Déconnexion</button>}
             </div>
           </div>
@@ -1378,7 +1448,7 @@ export default function App(){
         <div style={{height:3,background:"linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)",opacity:1}}/>
 
         {/* PAGES */}
-        {page==="home"&&<PageCalendrier tournois={tournois} setTournois={setTournois} currentUser={currentUser} sponsors={sponsors} inscrits={inscrits} onGoAdmin={()=>setPage("login")} onShowOrga={()=>setShowOrga(true)} visitesStats={visitesStats}/>}
+        {page==="home"&&<PageCalendrier tournois={tournois} setTournois={setTournois} currentUser={currentUser} sponsors={sponsors} inscrits={inscrits} onGoAdmin={()=>setPage("login")} onShowOrga={()=>setShowOrga(true)} visitesStats={visitesStats} onRetourAccueil={()=>{setShowIntro(true);setCurrentUser(null);signOut().catch(()=>{});}}/>}
         {page==="carte"&&<PageCarte tournois={tournois}/>}
       </div>
     </>

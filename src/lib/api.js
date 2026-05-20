@@ -123,7 +123,7 @@ export async function validerAdhesion(adhesionId) {
   // 3. Met à jour le statut → validee
   const { error: e3 } = await supabase
     .from('adhesions')
-    .update({ statut: 'validee', updated_at: new Date().toISOString() })
+    .update({ statut: 'validee', mdp_tmp: '', updated_at: new Date().toISOString() })
     .eq('id', adhesionId);
   if (e3) throw e3;
 }
@@ -133,6 +133,22 @@ export async function refuserAdhesion(adhesionId) {
   const { error } = await supabase.from('adhesions')
     .update({ statut: 'refusee', updated_at: new Date().toISOString() }).eq('id', adhesionId);
   if (error) throw error;
+}
+
+export async function supprimerAdhesion(adhesionId) {
+  if (!supabaseConfigured) return;
+  // 1. Récupère l'email de la demande
+  const { data: dem, error: e1 } = await supabase
+    .from('adhesions').select('email').eq('id', adhesionId).single();
+  if (e1 || !dem) throw new Error('Demande introuvable');
+  const email = dem.email;
+  // 2. Supprime dans organisateurs si existant
+  await supabase.from('organisateurs').delete().eq('email', email);
+  // 3. Supprime dans auth.users si utilisé (best effort)
+  // Note: nécessite service_role key pour supprimer auth users – on ignore l'erreur
+  // 4. Supprime la ligne adhesions
+  const { error: e2 } = await supabase.from('adhesions').delete().eq('id', adhesionId);
+  if (e2) throw e2;
 }
 
 // ══════════════════════════ TOURNOIS ═════════════════════════════════════════

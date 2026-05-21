@@ -124,8 +124,9 @@ npm run dev
 
 ### `tournois`
 - `id` (uuid)
-- `nom`, `description`, `date`, `ville`, `lieu`
+- `nom`, `description`, `date`, `heure`, `ville`, `lieu`
 - `telephone`, `email`
+- `nom_association`, `numero_identification`, `nombre_joueurs`
 - `image_url` (Supabase Storage)
 - `latitude`, `longitude` (géocodage automatique)
 - `status` (`pending` | `approved` | `rejected`)

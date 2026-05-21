@@ -74,17 +74,21 @@ export async function createTournoi(form, imageFile) {
   const { data, error } = await supabase
     .from('tournois')
     .insert({
-      nom:         form.nom,
-      description: form.description,
-      date:        form.date,
-      ville:       form.ville,
-      lieu:        form.lieu,
-      telephone:   form.telephone,
-      email:       form.email,
+      nom:                   form.nom,
+      description:           form.description,
+      date:                  form.date,
+      heure:                 form.heure || '',
+      ville:                 form.ville,
+      lieu:                  form.lieu,
+      telephone:             form.telephone,
+      email:                 form.email,
+      nom_association:       form.nom_association || '',
+      numero_identification: form.numero_identification || '',
+      nombre_joueurs:        form.nombre_joueurs ?? null,
       image_url,
-      latitude:    form.latitude ?? null,
-      longitude:   form.longitude ?? null,
-      status:      STATUS.PENDING,
+      latitude:              form.latitude ?? null,
+      longitude:             form.longitude ?? null,
+      status:                STATUS.PENDING,
     })
     .select()
     .single();

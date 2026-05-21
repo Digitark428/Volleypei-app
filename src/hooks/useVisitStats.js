@@ -9,7 +9,7 @@ export function useVisitStats(nbJours = 30) {
     trackVisit().catch(() => {});
     fetchVisitStats(nbJours)
       .then(setStats)
-      .catch(() => setStats({ total: 0, moyenne: 0, jours: [] }));
+      .catch(() => setStats({ total: 0, moyenne: 0, moyenne_semaine: 0, jours: [] }));
   }, [nbJours]);
 
   return stats;

@@ -17,7 +17,10 @@ function TournoiCard({ tournoi, onClick }) {
         <div className="t-card-meta">
           <div className="t-meta-row">
             <span>📅</span>
-            <span>{formatDateFR(tournoi.date)}</span>
+            <span>
+              {formatDateFR(tournoi.date)}
+              {tournoi.heure && ` · ${tournoi.heure}`}
+            </span>
           </div>
           <div className="t-meta-row">
             <span>📍</span>

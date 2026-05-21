@@ -7,10 +7,14 @@ const INITIAL_FORM = {
   nom: '',
   description: '',
   date: '',
+  heure: '',
   ville: '',
   lieu: '',
   telephone: '',
   email: '',
+  nom_association: '',
+  numero_identification: '',
+  nombre_joueurs: '',
   image: null,        // dataURL pour preview locale
   latitude: null,
   longitude: null,
@@ -21,20 +25,30 @@ const INITIAL_FORM = {
  * Retourne le 1er message d'erreur ou null si tout est OK.
  */
 function validateForm(form, imageFile) {
-  if (!form.nom.trim())           return "Le nom du tournoi est obligatoire.";
-  if (!form.date)                 return "La date est obligatoire.";
-  if (!form.lieu.trim())          return "Le lieu est obligatoire.";
-  if (!form.ville.trim())         return "La ville est obligatoire.";
-  if (!form.description.trim())   return "La description est obligatoire.";
+  if (!form.nom.trim())                   return "Le nom du tournoi est obligatoire.";
+  if (!form.date)                         return "La date est obligatoire.";
+  if (!form.heure || !form.heure.trim())  return "L'heure est obligatoire.";
+  if (!form.lieu.trim())                  return "Le lieu est obligatoire.";
+  if (!form.ville.trim())                 return "La ville est obligatoire.";
+  if (!form.description.trim())           return "La description est obligatoire.";
 
-  if (!form.telephone.trim())     return "Le numéro de téléphone est obligatoire.";
+  if (!form.telephone.trim())             return "Le numéro de téléphone est obligatoire.";
   const digits = form.telephone.replace(/\D/g, '');
-  if (digits.length < 8)          return "Le numéro doit être un vrai téléphone (≥ 8 chiffres).";
+  if (digits.length < 8)                  return "Le numéro doit être un vrai téléphone (≥ 8 chiffres).";
 
   if (!form.email.trim() || !form.email.includes('@')) {
     return "L'email est obligatoire et doit être valide.";
   }
-  if (!imageFile)                 return "L'affiche de l'événement est obligatoire.";
+
+  if (!form.nom_association.trim())       return "Le nom de l'association ou du club est obligatoire.";
+  if (!form.numero_identification.trim()) return "Le numéro d'identification de l'association est obligatoire.";
+
+  const nbJ = parseInt(form.nombre_joueurs, 10);
+  if (!form.nombre_joueurs || isNaN(nbJ) || nbJ <= 0) {
+    return "Le nombre de joueurs est obligatoire (entier positif).";
+  }
+
+  if (!imageFile)                         return "L'affiche de l'événement est obligatoire.";
   return null;
 }
 
@@ -101,7 +115,12 @@ export function useTournoiForm(initialDate) {
         if (coords) { latitude = coords.latitude; longitude = coords.longitude; }
       }
 
-      return await createTournoi({ ...form, latitude, longitude }, imageFile);
+      return await createTournoi({
+        ...form,
+        nombre_joueurs: parseInt(form.nombre_joueurs, 10),
+        latitude,
+        longitude,
+      }, imageFile);
     } catch (e) {
       const msg = "Erreur : " + (e.message || 'inconnue');
       setErr(msg);

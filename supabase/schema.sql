@@ -15,21 +15,31 @@ create extension if not exists "uuid-ossp";
 
 -- ─── Table : tournois ──────────────────────────────────────────────────────
 create table if not exists tournois (
-  id          uuid primary key default uuid_generate_v4(),
-  nom         text not null,
-  description text not null,
-  date        date not null,
-  ville       text not null,
-  lieu        text not null,
-  telephone   text not null,
-  email       text not null,
-  image_url   text,
-  latitude    numeric,
-  longitude   numeric,
-  status      text not null default 'pending'
-              check (status in ('pending', 'approved', 'rejected')),
-  created_at  timestamptz not null default now()
+  id                    uuid primary key default uuid_generate_v4(),
+  nom                   text not null,
+  description           text not null,
+  date                  date not null,
+  heure                 text not null default '',
+  ville                 text not null,
+  lieu                  text not null,
+  telephone             text not null,
+  email                 text not null,
+  nom_association       text not null default '',
+  numero_identification text not null default '',
+  nombre_joueurs        integer,
+  image_url             text,
+  latitude              numeric,
+  longitude             numeric,
+  status                text not null default 'pending'
+                        check (status in ('pending', 'approved', 'rejected')),
+  created_at            timestamptz not null default now()
 );
+
+-- Migration idempotente : ajoute les colonnes si la table existait déjà
+alter table tournois add column if not exists heure                 text    not null default '';
+alter table tournois add column if not exists nom_association       text    not null default '';
+alter table tournois add column if not exists numero_identification text    not null default '';
+alter table tournois add column if not exists nombre_joueurs        integer;
 
 create index if not exists tournois_status_idx on tournois (status);
 create index if not exists tournois_date_idx   on tournois (date);

@@ -26,7 +26,7 @@ export async function trackVisit() {
  * @returns {Promise<{total: number, moyenne: number, jours: Array<{jour: string, nb: number}>}>}
  */
 export async function fetchVisitStats(nbJours = 30) {
-  if (!supabaseConfigured) return { total: 0, moyenne: 0, jours: [] };
+  if (!supabaseConfigured) return { total: 0, moyenne: 0, moyenne_semaine: 0, jours: [] };
 
   const depuis = new Date();
   depuis.setDate(depuis.getDate() - nbJours);
@@ -38,11 +38,13 @@ export async function fetchVisitStats(nbJours = 30) {
     .gte('jour', depuisStr)
     .order('jour', { ascending: true });
 
-  if (error) return { total: 0, moyenne: 0, jours: [] };
+  if (error) return { total: 0, moyenne: 0, moyenne_semaine: 0, jours: [] };
 
   const jours = data || [];
   const total = jours.reduce((s, v) => s + v.nb, 0);
   const moyenne = nbJours > 0 ? Math.round(total / nbJours) : 0;
+  const nbSemaines = Math.max(1, nbJours / 7);
+  const moyenne_semaine = Math.round(total / nbSemaines);
 
-  return { total, moyenne, jours };
+  return { total, moyenne, moyenne_semaine, jours };
 }

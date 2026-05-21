@@ -28,12 +28,35 @@ function FormFields({ form, onChange }) {
         </div>
 
         <div>
+          <label className="lbl">Heure <Required /></label>
+          <input
+            type="time"
+            value={form.heure}
+            onChange={e => onChange('heure', e.target.value)}
+            className="field"
+          />
+        </div>
+
+        <div>
           <label className="lbl">Ville <Required /></label>
           <input
             type="text"
             placeholder="Saint-Gilles"
             value={form.ville}
             onChange={e => onChange('ville', e.target.value)}
+            className="field"
+          />
+        </div>
+
+        <div>
+          <label className="lbl">Nombre de joueurs <Required /></label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            placeholder="32"
+            value={form.nombre_joueurs}
+            onChange={e => onChange('nombre_joueurs', e.target.value)}
             className="field"
           />
         </div>
@@ -69,6 +92,28 @@ function FormFields({ form, onChange }) {
             placeholder="contact@club.re"
             value={form.email}
             onChange={e => onChange('email', e.target.value)}
+            className="field"
+          />
+        </div>
+
+        <div>
+          <label className="lbl">Association / Club <Required /></label>
+          <input
+            type="text"
+            placeholder="Volley Club de Saint-Pierre"
+            value={form.nom_association}
+            onChange={e => onChange('nom_association', e.target.value)}
+            className="field"
+          />
+        </div>
+
+        <div>
+          <label className="lbl">N° identification asso. <Required /></label>
+          <input
+            type="text"
+            placeholder="W974XXXXXXX / SIRET / RNA"
+            value={form.numero_identification}
+            onChange={e => onChange('numero_identification', e.target.value)}
             className="field"
           />
         </div>

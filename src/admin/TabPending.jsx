@@ -35,11 +35,16 @@ function PendingCard({ tournoi: t, onApprove, onReject }) {
             {t.nom}
           </div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 2 }}>
-            📅 {formatDateFR(t.date)}
+            📅 {formatDateFR(t.date)}{t.heure && ` · 🕒 ${t.heure}`}
           </div>
           <div style={{ fontSize: 12, color: 'var(--t3)' }}>
             📍 {t.lieu}{t.ville && `, ${t.ville}`}
           </div>
+          {t.nombre_joueurs > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+              👥 {t.nombre_joueurs} joueurs
+            </div>
+          )}
         </div>
       </div>
 
@@ -48,6 +53,12 @@ function PendingCard({ tournoi: t, onApprove, onReject }) {
         marginBottom: 12, fontSize: 12, color: 'var(--t2)', lineHeight: 1.7,
       }}>
         <div>📞 <strong>{t.telephone}</strong>{t.email && <> · ✉️ {t.email}</>}</div>
+        {t.nom_association && (
+          <div>
+            🏐 <strong>{t.nom_association}</strong>
+            {t.numero_identification && <> · n° {t.numero_identification}</>}
+          </div>
+        )}
         {t.description && (
           <div style={{ marginTop: 6, color: 'var(--t3)', fontStyle: 'italic' }}>
             "{t.description}"

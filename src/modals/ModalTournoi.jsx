@@ -23,8 +23,13 @@ function ModalTournoi({ tournoi: t, onClose }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: 'var(--t2)', fontSize: 14 }}>
-          <div>📅 <strong>{formatDateFR(t.date)}</strong></div>
+          <div>
+            📅 <strong>{formatDateFR(t.date)}</strong>
+            {t.heure && <> · 🕒 <strong>{t.heure}</strong></>}
+          </div>
           <div>📍 {t.lieu}{t.ville && `, ${t.ville}`}</div>
+          {t.nombre_joueurs > 0 && <div>👥 {t.nombre_joueurs} joueurs</div>}
+          {t.nom_association && <div>🏐 {t.nom_association}</div>}
           {t.telephone && (
             <div>
               📞 <a href={`tel:${t.telephone.replace(/\s/g, '')}`} style={{ color: 'var(--blue)' }}>{t.telephone}</a>

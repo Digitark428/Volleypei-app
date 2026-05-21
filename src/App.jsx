@@ -81,6 +81,7 @@ export default function App() {
               tournois={tournois}
               sponsors={sponsors}
               visitesStats={visitesStats}
+              onReload={reloadTournois}
             />
           )}
           {page === 'carte' && <PageCarte tournois={tournois} />}

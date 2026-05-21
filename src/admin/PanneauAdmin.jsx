@@ -1,43 +1,41 @@
 // src/admin/PanneauAdmin.jsx — Orchestrateur de l'espace admin
+//
+// v9 : plus de système de validation pending/approved.
+//      L'admin peut : supprimer/modifier des tournois, gérer les sponsors, voir les visites.
+
 import { useState, useEffect, useCallback } from 'react';
 import { LOGO_B64 } from '../lib/logo.js';
 import {
-  fetchAllTournois, fetchPendingTournois,
-  approveTournoi, rejectTournoi, deleteTournoi,
+  fetchTournois, deleteTournoi,
   fetchVisitStats,
   fetchAllSponsors, createSponsor, updateSponsor, deleteSponsor,
   approveSponsor, rejectSponsor, uploadSponsorImages,
   uploadImage,
 } from '../services/index.js';
-import { SPONSOR_TIERS, SPONSOR_CAPACITY, STATUS } from '../lib/constants.js';
-import TabPending  from './TabPending.jsx';
+import { SPONSOR_TIERS, SPONSOR_CAPACITY } from '../lib/constants.js';
 import TabTournois from './TabTournois.jsx';
 import TabSponsors from './TabSponsors.jsx';
 import TabVisits   from './TabVisits.jsx';
 
 const TABS = [
-  { key: 'pending',  label: 'En attente' },
   { key: 'tournois', label: 'Tournois' },
   { key: 'sponsors', label: 'Sponsors' },
-  { key: 'visites',  label: 'Visites' },
+  { key: 'visites',  label: 'Visites'  },
 ];
 
 function PanneauAdmin({ onBack, onLogout }) {
-  const [tab, setTab]               = useState('pending');
-  const [pending, setPending]       = useState([]);
-  const [allTournois, setAll]       = useState([]);
-  const [sponsors, setSponsors]     = useState([]);
-  const [visites, setVisites]       = useState(null);
+  const [tab, setTab]           = useState('tournois');
+  const [allTournois, setAll]   = useState([]);
+  const [sponsors, setSponsors] = useState([]);
+  const [visites, setVisites]   = useState(null);
 
   const reload = useCallback(async () => {
     try {
-      const [p, all, sp, v] = await Promise.all([
-        fetchPendingTournois(),
-        fetchAllTournois(),
+      const [all, sp, v] = await Promise.all([
+        fetchTournois(),
         fetchAllSponsors(),
         fetchVisitStats(30),
       ]);
-      setPending(p);
       setAll(all);
       setSponsors(sp);
       setVisites(v);
@@ -49,28 +47,15 @@ function PanneauAdmin({ onBack, onLogout }) {
   useEffect(() => { reload(); }, [reload]);
 
   // ─── Tournois ─────────────────────────────────────────────────────────────
-  const handleApprove = useCallback(async (id) => {
-    try { await approveTournoi(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
-  }, [reload]);
-
-  const handleReject = useCallback(async (id) => {
-    if (!window.confirm("Refuser ce tournoi ?")) return;
-    try { await rejectTournoi(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
-  }, [reload]);
-
   const handleDeleteTournoi = useCallback(async (id) => {
-    if (!window.confirm("Supprimer définitivement ce tournoi ?")) return;
+    if (!window.confirm('Supprimer définitivement ce tournoi ?')) return;
     try { await deleteTournoi(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
+    catch (err) { alert('Erreur : ' + err.message); }
   }, [reload]);
 
   // ─── Sponsors ─────────────────────────────────────────────────────────────
   const handleAddSponsor = useCallback(async () => {
     try {
-      // Création admin = directement approved (admin a confiance dans ses propres ajouts)
-      // Pour rester strict sur le workflow, on laisse "pending" et l'admin valide ensuite.
       await createSponsor({
         nom: 'Nouveau sponsor',
         type: SPONSOR_TIERS.BRONZE,
@@ -84,7 +69,7 @@ function PanneauAdmin({ onBack, onLogout }) {
       });
       await reload();
     } catch (err) {
-      alert("Erreur : " + err.message);
+      alert('Erreur : ' + err.message);
     }
   }, [reload, sponsors.length]);
 
@@ -93,40 +78,38 @@ function PanneauAdmin({ onBack, onLogout }) {
     try {
       await updateSponsor(id, patch);
     } catch (err) {
-      alert("Erreur : " + err.message);
+      alert('Erreur : ' + err.message);
       await reload();
     }
   }, [reload]);
 
   const handleDeleteSponsor = useCallback(async (id) => {
-    if (!window.confirm("Supprimer ce sponsor ?")) return;
+    if (!window.confirm('Supprimer ce sponsor ?')) return;
     try { await deleteSponsor(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
+    catch (err) { alert('Erreur : ' + err.message); }
   }, [reload]);
 
   const handleApproveSponsor = useCallback(async (id) => {
     try { await approveSponsor(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
+    catch (err) { alert('Erreur : ' + err.message); }
   }, [reload]);
 
   const handleRejectSponsor = useCallback(async (id) => {
-    if (!window.confirm("Refuser ce sponsor ?")) return;
+    if (!window.confirm('Refuser ce sponsor ?')) return;
     try { await rejectSponsor(id); await reload(); }
-    catch (err) { alert("Erreur : " + err.message); }
+    catch (err) { alert('Erreur : ' + err.message); }
   }, [reload]);
 
-  /** Upload de la photo principale (image_url) — historique. */
   const handleUploadSponsorImage = useCallback(async (id, file) => {
     try {
       const url = await uploadImage(file, 'sponsors');
       await updateSponsor(id, { image_url: url });
       await reload();
     } catch (err) {
-      alert("Erreur upload : " + err.message);
+      alert('Erreur upload : ' + err.message);
     }
   }, [reload]);
 
-  /** Upload de plusieurs images : ajoutées à la galerie `images`. */
   const handleUploadSponsorImages = useCallback(async (id, files) => {
     if (!files || files.length === 0) return;
     try {
@@ -135,17 +118,15 @@ function PanneauAdmin({ onBack, onLogout }) {
       const sponsor = sponsors.find(s => s.id === id);
       const existing = Array.isArray(sponsor?.images) ? sponsor.images : [];
       const merged = [...existing, ...urls];
-      // Si pas d'image principale, on prend la première de la galerie
       const patch = { images: merged };
       if (!sponsor?.image_url && merged.length > 0) patch.image_url = merged[0];
       await updateSponsor(id, patch);
       await reload();
     } catch (err) {
-      alert("Erreur upload : " + err.message);
+      alert('Erreur upload : ' + err.message);
     }
   }, [reload, sponsors]);
 
-  /** Suppression d'une image de la galerie (UI only, on garde le fichier en Storage). */
   const handleRemoveSponsorImage = useCallback(async (id, url) => {
     const sponsor = sponsors.find(s => s.id === id);
     if (!sponsor) return;
@@ -156,7 +137,6 @@ function PanneauAdmin({ onBack, onLogout }) {
     await handlePatchSponsor(id, patch);
   }, [sponsors, handlePatchSponsor]);
 
-  /** Réordonne une image dans la galerie (Δ = +1 ou -1). */
   const handleReorderSponsorImage = useCallback(async (id, url, delta) => {
     const sponsor = sponsors.find(s => s.id === id);
     if (!sponsor) return;
@@ -170,18 +150,16 @@ function PanneauAdmin({ onBack, onLogout }) {
     await handlePatchSponsor(id, { images: arr });
   }, [sponsors, handlePatchSponsor]);
 
-  // ─── Places disponibles par tier (sponsors approved seulement) ────────────
+  // ─── Places disponibles par tier ─────────────────────────────────────────
   const sponsorPlaces = {
-    gold:   { used: sponsors.filter(s => s.type === 'gold'   && s.status === STATUS.APPROVED).length, total: SPONSOR_CAPACITY.gold   },
-    silver: { used: sponsors.filter(s => s.type === 'silver' && s.status === STATUS.APPROVED).length, total: SPONSOR_CAPACITY.silver },
-    bronze: { used: sponsors.filter(s => s.type === 'bronze' && s.status === STATUS.APPROVED).length, total: SPONSOR_CAPACITY.bronze },
+    gold:   { used: sponsors.filter(s => s.type === 'gold'   && s.status === 'approved').length, total: SPONSOR_CAPACITY.gold   },
+    silver: { used: sponsors.filter(s => s.type === 'silver' && s.status === 'approved').length, total: SPONSOR_CAPACITY.silver },
+    bronze: { used: sponsors.filter(s => s.type === 'bronze' && s.status === 'approved').length, total: SPONSOR_CAPACITY.bronze },
   };
 
-  // ─── Compteurs badges onglets ─────────────────────────────────────────────
   const counts = {
-    pending:  pending.length,
     tournois: allTournois.length,
-    sponsors: sponsors.filter(s => s.status === STATUS.APPROVED && s.actif).length,
+    sponsors: sponsors.filter(s => s.status === 'approved' && s.actif).length,
     visites:  visites?.moyenne ?? 0,
   };
 
@@ -200,7 +178,7 @@ function PanneauAdmin({ onBack, onLogout }) {
             <button
               className="btn-reject"
               onClick={() => {
-                if (window.confirm('Se déconnecter de l\'espace admin ?')) onLogout?.();
+                if (window.confirm("Se déconnecter de l'espace admin ?")) onLogout?.();
               }}
               style={{ padding: '7px 14px', fontSize: 12 }}
             >
@@ -226,7 +204,6 @@ function PanneauAdmin({ onBack, onLogout }) {
       </div>
 
       <div className="adm-wrap">
-        {tab === 'pending'  && <TabPending  pending={pending} onApprove={handleApprove} onReject={handleReject} />}
         {tab === 'tournois' && <TabTournois tournois={allTournois} onDelete={handleDeleteTournoi} />}
         {tab === 'sponsors' && (
           <TabSponsors
@@ -243,7 +220,7 @@ function PanneauAdmin({ onBack, onLogout }) {
             onAddNew={handleAddSponsor}
           />
         )}
-        {tab === 'visites'  && <TabVisits stats={visites} />}
+        {tab === 'visites' && <TabVisits stats={visites} />}
       </div>
     </div>
   );

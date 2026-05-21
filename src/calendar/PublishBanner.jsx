@@ -1,4 +1,4 @@
-// src/calendar/PublishBanner.jsx — Bannière de confirmation après soumission
+// src/calendar/PublishBanner.jsx — Bannière de confirmation après publication directe
 
 function PublishBanner() {
   return (
@@ -16,10 +16,10 @@ function PublishBanner() {
       }}>✓</div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>
-          Tournoi soumis pour validation
+          Tournoi publié avec succès !
         </div>
         <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-          Vous serez contacté pour confirmer les informations avant publication.
+          Votre tournoi est maintenant visible dans le calendrier.
         </div>
       </div>
     </div>

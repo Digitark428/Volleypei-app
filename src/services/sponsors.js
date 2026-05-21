@@ -1,7 +1,5 @@
 // src/services/sponsors.js — Service Supabase : table `sponsors`
-// Workflow validation admin : `pending` → `approved` (ou `rejected`).
 import { supabase, supabaseConfigured } from '../lib/supabase.js';
-import { STATUS } from '../lib/constants.js';
 import { uploadImage } from './storage.js';
 
 /**
@@ -14,7 +12,7 @@ export async function fetchActiveSponsors() {
     .from('sponsors')
     .select('*')
     .eq('actif', true)
-    .eq('status', STATUS.APPROVED)
+    .eq('status', 'approved')
     .order('ordre', { ascending: true });
   if (error) throw error;
   return data || [];
@@ -31,19 +29,7 @@ export async function fetchAllSponsors() {
   return data || [];
 }
 
-/** Sponsors en attente de validation (admin). */
-export async function fetchPendingSponsors() {
-  if (!supabaseConfigured) return [];
-  const { data, error } = await supabase
-    .from('sponsors')
-    .select('*')
-    .eq('status', STATUS.PENDING)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-/** Crée un sponsor (toujours en `pending`). */
+/** Crée un sponsor (directement approuvé par l'admin). */
 export async function createSponsor(sponsor) {
   if (!supabaseConfigured) return null;
   const { data, error } = await supabase
@@ -58,7 +44,7 @@ export async function createSponsor(sponsor) {
       lien:              sponsor.lien ?? '',
       actif:             sponsor.actif ?? true,
       ordre:             sponsor.ordre ?? 0,
-      status:            STATUS.PENDING,
+      status:            'approved',
     })
     .select()
     .single();
@@ -79,22 +65,22 @@ export async function updateSponsor(id, patch) {
   return data;
 }
 
-/** Valide un sponsor → status `approved`. */
+/** Valide un sponsor → status 'approved'. */
 export async function approveSponsor(id) {
   if (!supabaseConfigured) return;
   const { error } = await supabase
     .from('sponsors')
-    .update({ status: STATUS.APPROVED })
+    .update({ status: 'approved' })
     .eq('id', id);
   if (error) throw error;
 }
 
-/** Refuse un sponsor → status `rejected`. */
+/** Refuse un sponsor → status 'rejected'. */
 export async function rejectSponsor(id) {
   if (!supabaseConfigured) return;
   const { error } = await supabase
     .from('sponsors')
-    .update({ status: STATUS.REJECTED })
+    .update({ status: 'rejected' })
     .eq('id', id);
   if (error) throw error;
 }
@@ -108,9 +94,8 @@ export async function deleteSponsor(id) {
 
 /**
  * Upload multiple fichiers vers le dossier `sponsors/`.
- * Compression best-effort déjà appliquée par uploadImage.
  * @param {File[]} files
- * @returns {Promise<string[]>} URLs publiques (skip les uploads ratés)
+ * @returns {Promise<string[]>} URLs publiques
  */
 export async function uploadSponsorImages(files) {
   if (!files || files.length === 0) return [];
@@ -121,7 +106,6 @@ export async function uploadSponsorImages(files) {
       if (url) results.push(url);
     } catch (e) {
       console.error('uploadSponsorImages: skipped one file', e);
-      // best-effort : on continue avec les autres
     }
   }
   return results;

@@ -1,6 +1,6 @@
 // src/admin/TabSponsors.jsx — Gestion complète des sponsors (CRUD + workflow + galerie)
 import { useRef, useState } from 'react';
-import { SPONSOR_TIERS, STATUS } from '../lib/constants.js';
+import { SPONSOR_TIERS } from '../lib/constants.js';
 
 const TIER_OPTIONS = [
   { value: SPONSOR_TIERS.GOLD,   label: 'Gold' },
@@ -179,9 +179,9 @@ function galleryBtnStyle(disabled) {
 // ─── Card d'un sponsor ──────────────────────────────────────────────────────
 function SponsorRow({ sponsor, onPatch, onDelete, onApprove, onReject,
                      onUploadMultiple, onRemoveImage, onReorderImage }) {
-  const isPending  = sponsor.status === STATUS.PENDING;
-  const isRejected = sponsor.status === STATUS.REJECTED;
-  const isApproved = sponsor.status === STATUS.APPROVED;
+  const isPending  = sponsor.status === 'pending';
+  const isRejected = sponsor.status === 'rejected';
+  const isApproved = sponsor.status === 'approved';
 
   const statusColor = isPending ? '#d97706' : isApproved ? '#16a34a' : '#dc2626';
   const statusBg    = isPending ? '#fef3c7' : isApproved ? '#dcfce7' : '#fee2e2';
@@ -383,9 +383,9 @@ function TabSponsors({
 
   const counts = {
     all:      sponsors.length,
-    pending:  sponsors.filter(s => s.status === STATUS.PENDING).length,
-    approved: sponsors.filter(s => s.status === STATUS.APPROVED).length,
-    rejected: sponsors.filter(s => s.status === STATUS.REJECTED).length,
+    pending:  sponsors.filter(s => s.status === 'pending').length,
+    approved: sponsors.filter(s => s.status === 'approved').length,
+    rejected: sponsors.filter(s => s.status === 'rejected').length,
   };
 
   return (

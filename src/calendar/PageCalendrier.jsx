@@ -11,7 +11,7 @@ import SelectedDateBar   from './SelectedDateBar.jsx';
 import TournoisList      from './TournoisList.jsx';
 import { SponsorGold, SponsorSilverRow, SponsorBronzeRow } from './SponsorSlots.jsx';
 
-function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
+function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats, onReload }) {
   const today = new Date();
   const [annee, setAnnee]                       = useState(today.getFullYear());
   const [mois, setMois]                         = useState(today.getMonth());
@@ -67,7 +67,9 @@ function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
     setPreselectedDate(null);
     setShowPublishBanner(true);
     setTimeout(() => setShowPublishBanner(false), 6000);
-  }, []);
+    // Recharger la liste pour afficher immédiatement le nouveau tournoi
+    onReload?.();
+  }, [onReload]);
 
   const onAddTournoi = useCallback(() => {
     setShowForm(true);

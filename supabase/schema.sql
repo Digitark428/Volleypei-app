@@ -1,20 +1,19 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- VOLLEYPÉI — Schéma Supabase (v8)
+-- VOLLEYPÉI — Schéma Supabase (v9)
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 👉 À exécuter dans : Supabase Dashboard → SQL Editor → New query → Run
 -- 👉 IDEMPOTENT : tu peux l'exécuter plusieurs fois sans risque.
 --
--- ARCHITECTURE MINIMALE (zéro système de comptes) :
---   1. tournois   → publication publique, validation admin via `status`
+-- ARCHITECTURE MINIMALE :
+--   1. tournois   → publication directe, aucune validation admin requise
 --   2. sponsors   → gérés depuis l'espace admin
 --   3. visites    → tracking simple par jour (upsert atomique)
 --   4. storage    → bucket public 'volleypei'
 --
--- CHANGEMENTS v8 :
---   - Ajout de `type` (Beach / Salle / Mixte / ...) sur tournois
---   - Les colonnes `nom_association` et `numero_identification` restent en BDD
---     pour rétro-compat des anciennes données — elles ne sont plus collectées
---     par le formulaire public (champ optionnel default '').
+-- CHANGEMENTS v9 :
+--   - Suppression du champ `status` sur la table tournois
+--   - Tout tournoi publié est immédiatement visible dans le calendrier
+--   - Suppression des colonnes legacy nom_association / numero_identification
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ─── Extensions ────────────────────────────────────────────────────────────
@@ -22,55 +21,81 @@ create extension if not exists "uuid-ossp";
 
 -- ─── Table : tournois ──────────────────────────────────────────────────────
 create table if not exists tournois (
-  id                    uuid primary key default uuid_generate_v4(),
-  nom                   text not null,
-  description           text not null,
-  date                  date not null,
-  heure                 text not null default '',
-  ville                 text not null,
-  lieu                  text not null,
-  type                  text not null default '',
-  telephone             text not null,
-  email                 text not null,
-  nom_association       text not null default '',  -- legacy, plus collecté
-  numero_identification text not null default '',  -- legacy, plus collecté
-  nombre_joueurs        integer,
-  image_url             text,
-  latitude              numeric,
-  longitude             numeric,
-  status                text not null default 'pending'
-                        check (status in ('pending', 'approved', 'rejected')),
-  created_at            timestamptz not null default now()
+  id             uuid primary key default uuid_generate_v4(),
+  nom            text not null,
+  description    text not null,
+  date           date not null,
+  heure          text not null default '',
+  ville          text not null,
+  lieu           text not null,
+  type           text not null default '',
+  telephone      text not null,
+  email          text not null,
+  nombre_joueurs integer,
+  image_url      text,
+  latitude       numeric,
+  longitude      numeric,
+  created_at     timestamptz not null default now()
 );
 
--- Migrations idempotentes : ajoute les colonnes si la table existait déjà
-alter table tournois add column if not exists heure                 text    not null default '';
-alter table tournois add column if not exists type                  text    not null default '';
-alter table tournois add column if not exists nom_association       text    not null default '';
-alter table tournois add column if not exists numero_identification text    not null default '';
-alter table tournois add column if not exists nombre_joueurs        integer;
+-- Migrations idempotentes si la table existait déjà avec les anciens champs
+alter table tournois add column if not exists heure          text    not null default '';
+alter table tournois add column if not exists type           text    not null default '';
+alter table tournois add column if not exists nombre_joueurs integer;
 
-create index if not exists tournois_status_idx on tournois (status);
-create index if not exists tournois_date_idx   on tournois (date);
+-- Supprimer la colonne status si elle existe encore (migration de v8 → v9)
+-- On ne drop pas directement pour éviter les erreurs si elle n'existe pas
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'tournois' and column_name = 'status'
+  ) then
+    alter table tournois drop column status;
+  end if;
+end $$;
+
+-- Supprimer les colonnes legacy si elles existent encore
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'tournois' and column_name = 'nom_association'
+  ) then
+    alter table tournois drop column nom_association;
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'tournois' and column_name = 'numero_identification'
+  ) then
+    alter table tournois drop column numero_identification;
+  end if;
+end $$;
+
+create index if not exists tournois_date_idx on tournois (date);
 
 alter table tournois enable row level security;
 
--- Lecture publique (le filtre 'approved' se fait côté front pour la liste publique).
--- L'admin utilise la même clé anon — la protection se fait par mot de passe front.
+-- Lecture publique — tous les tournois sont visibles
 drop policy if exists "tournois_select_public" on tournois;
 create policy "tournois_select_public" on tournois
   for select using (true);
 
--- ⚠️ CRITIQUE : insertion publique avec status='pending' obligatoire.
--- Si cette policy manque, AUCUN tournoi ne remonte dans l'admin.
+-- Insertion publique sans restriction de status
 drop policy if exists "tournois_insert_public" on tournois;
 create policy "tournois_insert_public" on tournois
-  for insert with check (status = 'pending');
+  for insert with check (true);
 
+-- Mise à jour (admin uniquement via front)
 drop policy if exists "tournois_update_public" on tournois;
 create policy "tournois_update_public" on tournois
   for update using (true);
 
+-- Suppression (admin uniquement via front)
 drop policy if exists "tournois_delete_public" on tournois;
 create policy "tournois_delete_public" on tournois
   for delete using (true);
@@ -87,7 +112,7 @@ create table if not exists sponsors (
   lien              text not null default '',
   actif             boolean not null default true,
   ordre             integer not null default 0,
-  status            text not null default 'pending'
+  status            text not null default 'approved'
                     check (status in ('pending', 'approved', 'rejected')),
   created_at        timestamptz not null default now()
 );
@@ -95,21 +120,10 @@ create table if not exists sponsors (
 alter table sponsors add column if not exists slogan            text  not null default '';
 alter table sponsors add column if not exists description_offre text  not null default '';
 alter table sponsors add column if not exists images            jsonb not null default '[]'::jsonb;
-alter table sponsors add column if not exists status            text  not null default 'pending';
+alter table sponsors add column if not exists status            text  not null default 'approved';
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'sponsors_status_check'
-  ) then
-    alter table sponsors
-      add constraint sponsors_status_check
-      check (status in ('pending', 'approved', 'rejected'));
-  end if;
-end $$;
-
--- Sponsors anciens : approuvés par défaut
-update sponsors set status = 'approved' where status = 'pending' and created_at < now() - interval '1 minute';
+-- Approuver tous les sponsors existants
+update sponsors set status = 'approved' where status = 'pending';
 
 create index if not exists sponsors_actif_idx  on sponsors (actif);
 create index if not exists sponsors_type_idx   on sponsors (type);
@@ -123,7 +137,7 @@ create policy "sponsors_select_public" on sponsors
 
 drop policy if exists "sponsors_insert_public" on sponsors;
 create policy "sponsors_insert_public" on sponsors
-  for insert with check (status = 'pending');
+  for insert with check (true);
 
 drop policy if exists "sponsors_update_public" on sponsors;
 create policy "sponsors_update_public" on sponsors
@@ -155,19 +169,23 @@ create policy "visites_update_public" on visites
   for update using (true);
 
 -- ─── Fonction : upsert_visite (atomique) ──────────────────────────────────
+-- ⚠️ CRITIQUE : cette fonction DOIT exister sinon les stats restent à 0
 create or replace function upsert_visite(p_jour date)
 returns void
 language plpgsql
 security definer
 as $$
 begin
-  insert into visites (jour, nb)
-  values (p_jour, 1)
+  insert into visites (jour, nb, updated_at)
+  values (p_jour, 1, now())
   on conflict (jour)
-  do update set nb = visites.nb + 1, updated_at = now();
+  do update set
+    nb         = visites.nb + 1,
+    updated_at = now();
 end;
 $$;
 
+-- Accorder les permissions à anon ET authenticated
 grant execute on function upsert_visite(date) to anon, authenticated;
 
 -- ─── Storage : bucket 'volleypei' ──────────────────────────────────────────
@@ -187,5 +205,5 @@ create policy "storage_delete_public" on storage.objects
   for delete using (bucket_id = 'volleypei');
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- ✅ Fin du schéma v8
+-- ✅ Fin du schéma v9
 -- ═══════════════════════════════════════════════════════════════════════════

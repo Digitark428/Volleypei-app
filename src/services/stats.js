@@ -2,15 +2,15 @@
 //
 // ARCHITECTURE :
 //   - Table `visites` : 1 ligne par jour (PK = jour) avec un compteur entier.
-//   - Fonction `upsert_visite(p_jour)` : incrémente atomiquement.
+//   - Fonction SQL `upsert_visite(p_jour)` : incrémente atomiquement.
 //   - Côté front : 1 visite/navigateur/jour, dédupliquée par localStorage.
 //   - Lecture : agrégation sur N derniers jours (total + moyenne jour/semaine).
 //
-// ROBUSTESSE :
-//   - Pas de doublon abusif (clé localStorage `volleypei_visited_YYYY-MM-DD`)
-//   - Si Supabase non configuré → retourne des stats à 0 sans planter
-//   - Si la RPC échoue → on retente une fois (best-effort)
-//   - Le tracking est totalement non bloquant (try/catch silencieux)
+// DIAGNOSTIC :
+//   Si les stats restent à 0, vérifier dans Supabase SQL Editor :
+//     select * from visites order by jour desc limit 10;
+//     select upsert_visite('2025-01-01');
+//   Si la fonction n'existe pas : exécuter le schema.sql complet.
 
 import { supabase, supabaseConfigured } from '../lib/supabase.js';
 
@@ -45,19 +45,18 @@ export async function trackVisit() {
       // Retry simple (réseau capricieux mobile)
       const retry = await supabase.rpc('upsert_visite', { p_jour: today });
       if (retry.error) {
-        console.warn('trackVisit: échec persistant', retry.error.message);
+        console.warn('trackVisit: échec persistant —', retry.error.message);
+        console.warn('→ Vérifier que la fonction upsert_visite existe dans Supabase.');
         return;
       }
     }
 
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(fullKey, '1');
-      // Nettoyage des anciennes clés (>14j) pour ne pas remplir localStorage
       cleanupOldKeys();
     }
   } catch (e) {
-    // Analytics — non bloquant
-    console.warn('trackVisit: exception', e?.message);
+    console.warn('trackVisit exception:', e?.message);
   }
 }
 
@@ -78,30 +77,37 @@ function cleanupOldKeys() {
 }
 
 /**
- * Récupère les statistiques de visites sur les N derniers jours + total global.
+ * Récupère les statistiques de visites.
  *
- * @param {number} nbJours - Nombre de jours pour la fenêtre glissante (default 30)
- * @returns {Promise<{total: number, moyenne: number, moyenne_semaine: number, jours: Array<{jour: string, nb: number}>, total_global: number}>}
- *   - total          : visites sur la fenêtre [today-nbJours, today]
- *   - moyenne        : total / nbJours
- *   - moyenne_semaine: total / (nbJours/7)
- *   - jours          : détail par jour (ASC)
- *   - total_global   : visites cumulées DEPUIS LE DÉBUT (toutes les lignes)
+ * @param {number} nbJours - Fenêtre glissante en jours (default 30)
+ * @returns {Promise<{
+ *   total: number,
+ *   moyenne: number,
+ *   moyenne_semaine: number,
+ *   jours: Array<{jour: string, nb: number}>,
+ *   total_global: number
+ * }>}
  */
 export async function fetchVisitStats(nbJours = 30) {
   const empty = { total: 0, moyenne: 0, moyenne_semaine: 0, jours: [], total_global: 0 };
   if (!supabaseConfigured) return empty;
 
   try {
-    // 1) Total global (toutes les lignes) — requête séparée mais légère
+    // 1) Total global (toutes les lignes de la table)
     const { data: allData, error: allErr } = await supabase
       .from('visites')
       .select('nb');
-    const total_global = allErr ? 0 : (allData || []).reduce((s, v) => s + (v.nb || 0), 0);
+
+    if (allErr) {
+      console.warn('fetchVisitStats: erreur lecture visites —', allErr.message);
+      return empty;
+    }
+
+    const total_global = (allData || []).reduce((s, v) => s + (v.nb || 0), 0);
 
     // 2) Détail sur la fenêtre glissante
     const depuis = new Date();
-    depuis.setDate(depuis.getDate() - nbJours + 1); // +1 pour inclure aujourd'hui
+    depuis.setDate(depuis.getDate() - nbJours + 1);
     const depuisStr = depuis.toISOString().slice(0, 10);
 
     const { data, error } = await supabase
@@ -110,7 +116,10 @@ export async function fetchVisitStats(nbJours = 30) {
       .gte('jour', depuisStr)
       .order('jour', { ascending: true });
 
-    if (error) return { ...empty, total_global };
+    if (error) {
+      console.warn('fetchVisitStats: erreur fenêtre —', error.message);
+      return { ...empty, total_global };
+    }
 
     const jours = data || [];
     const total = jours.reduce((s, v) => s + (v.nb || 0), 0);
@@ -120,7 +129,7 @@ export async function fetchVisitStats(nbJours = 30) {
 
     return { total, moyenne, moyenne_semaine, jours, total_global };
   } catch (e) {
-    console.warn('fetchVisitStats:', e?.message);
+    console.warn('fetchVisitStats exception:', e?.message);
     return empty;
   }
 }

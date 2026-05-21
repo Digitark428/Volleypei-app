@@ -1,6 +1,6 @@
-// src/hooks/useTournois.js — Charge les tournois publics (validés)
+// src/hooks/useTournois.js — Charge tous les tournois (publication directe)
 import { useState, useEffect, useCallback } from 'react';
-import { fetchApprovedTournois } from '../services/tournois.js';
+import { fetchTournois } from '../services/tournois.js';
 
 export function useTournois() {
   const [tournois, setTournois] = useState([]);
@@ -9,7 +9,7 @@ export function useTournois() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setTournois(await fetchApprovedTournois());
+      setTournois(await fetchTournois());
     } catch (err) {
       console.error('useTournois:', err);
     } finally {

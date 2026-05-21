@@ -72,10 +72,18 @@ function PagePartenaires({ onBack, tournois }) {
   }
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{
+      background: 'var(--bg)',
+      minHeight: '100vh',
+      minHeight: '100dvh',
+      paddingTop: 'calc(var(--nav-h) + var(--safe-top))',
+      paddingBottom: 'var(--safe-bottom)',
+      paddingLeft: 'var(--safe-left)',
+      paddingRight: 'var(--safe-right)',
+    }}>
       <nav className="nav">
         <div className="nav-in">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
             <img src={LOGO_B64} alt="VolleyPéi" style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.3 }} className="nl">
               VolleyPéi
@@ -85,10 +93,7 @@ function PagePartenaires({ onBack, tournois }) {
         </div>
       </nav>
 
-      <div style={{
-        height: 3,
-        background: 'linear-gradient(90deg,var(--re-b) 0% 33%,var(--re-y) 33% 66%,var(--re-r) 66% 100%)',
-      }} />
+      <div className="strip" />
 
       {/* Bandeau aperçu */}
       <div style={{
@@ -101,18 +106,16 @@ function PagePartenaires({ onBack, tournois }) {
           width: 6, height: 6, borderRadius: '50%',
           background: 'var(--blue)', animation: 'pulse 1.8s infinite',
         }} />
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--blue)', letterSpacing: 0.2 }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--blue)', letterSpacing: 0.2, textAlign: 'center' }}>
           Aperçu partenaires · Tous les emplacements sont affichés
         </span>
       </div>
 
-      <div className="page" style={{ paddingTop: 0 }}>
-        <PageCalendrier
-          tournois={tournois}
-          sponsors={[]}
-          showEmpty={true}
-        />
-      </div>
+      <PageCalendrier
+        tournois={tournois}
+        sponsors={[]}
+        showEmpty={true}
+      />
     </div>
   );
 }

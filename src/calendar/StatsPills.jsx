@@ -1,4 +1,7 @@
-// src/calendar/StatsPills.jsx — Deux pills d'info en haut du calendrier
+// src/calendar/StatsPills.jsx — Pills d'info en haut du calendrier
+//
+// Affiche le total de visites cumulées et le nombre de tournois publiés.
+// `visitesStats` peut être null pendant le chargement initial → on affiche '—'.
 
 function Pill({ label, value, suffix }) {
   return (
@@ -14,7 +17,9 @@ function Pill({ label, value, suffix }) {
         {label}
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 3 }}>
-        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>{value}</span>
+        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3, fontVariantNumeric: 'tabular-nums' }}>
+          {value}
+        </span>
         {suffix && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{suffix}</span>}
       </div>
     </div>
@@ -22,10 +27,12 @@ function Pill({ label, value, suffix }) {
 }
 
 function StatsPills({ visitesStats, nbTournois }) {
+  // Préférence : total_global (toutes périodes) > total (30 jours) > '—'
+  const visites = visitesStats?.total_global ?? visitesStats?.total ?? '—';
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-      <Pill label="Visites · 30j"  value={visitesStats?.total ?? '—'}  suffix="au total" />
-      <Pill label="Tournois"       value={nbTournois}                    suffix="publiés" />
+      <Pill label="Visites"  value={visites}    suffix="au total" />
+      <Pill label="Tournois" value={nbTournois} suffix="publiés" />
     </div>
   );
 }

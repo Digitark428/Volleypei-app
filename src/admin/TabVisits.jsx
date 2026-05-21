@@ -15,10 +15,10 @@ function TabVisits({ stats }) {
         gap: 14, marginBottom: 32,
       }}>
         {[
-          { label: 'Visites totales',  val: stats?.total ?? '—',           icon: '👁️' },
+          { label: 'Visites totales (toutes périodes)', val: stats?.total_global ?? '—', icon: '🌍' },
+          { label: 'Visites · 30 jours', val: stats?.total ?? '—',           icon: '👁️' },
           { label: 'Moyenne / jour',   val: stats?.moyenne ?? '—',         icon: '📈' },
           { label: 'Moyenne / semaine', val: stats?.moyenne_semaine ?? '—', icon: '📊' },
-          { label: 'Jours avec visites', val: stats?.jours?.length ?? '—', icon: '📅' },
         ].map(({ label, val, icon }) => (
           <div
             key={label}

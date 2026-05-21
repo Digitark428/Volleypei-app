@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { todayISO } from '../lib/dates.js';
 import ModalTournoi      from '../modals/ModalTournoi.jsx';
 import ModalFormTournoi  from '../modals/ModalFormTournoi.jsx';
+import ModalSponsor      from '../modals/ModalSponsor.jsx';
 import MonthGrid         from './MonthGrid.jsx';
 import StatsPills        from './StatsPills.jsx';
 import PublishBanner     from './PublishBanner.jsx';
@@ -19,6 +20,7 @@ function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
   const [showForm, setShowForm]                 = useState(false);
   const [preselectedDate, setPreselectedDate]   = useState(null);
   const [showPublishBanner, setShowPublishBanner] = useState(false);
+  const [selectedSponsor, setSelectedSponsor]   = useState(null);
 
   // ─── Données dérivées ─────────────────────────────────────────────────────
   const tournoisByDate = useMemo(() => {
@@ -76,6 +78,9 @@ function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '28px 16px 60px' }}>
       {showDetail && <ModalTournoi tournoi={showDetail} onClose={() => setShowDetail(null)} />}
+      {selectedSponsor && (
+        <ModalSponsor sponsor={selectedSponsor} onClose={() => setSelectedSponsor(null)} />
+      )}
       {showForm && (
         <ModalFormTournoi
           tournois={tournois}
@@ -85,7 +90,7 @@ function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
         />
       )}
 
-      <SponsorGold sponsors={sponsors} showEmpty={showEmpty} />
+      <SponsorGold sponsors={sponsors} showEmpty={showEmpty} onSponsorClick={setSelectedSponsor} />
 
       {showPublishBanner && <PublishBanner />}
 
@@ -114,11 +119,11 @@ function PageCalendrier({ tournois, sponsors, showEmpty, visitesStats }) {
         onAddTournoi={onAddTournoi}
       />
 
-      <SponsorSilverRow sponsors={sponsors} showEmpty={showEmpty} />
+      <SponsorSilverRow sponsors={sponsors} showEmpty={showEmpty} onSponsorClick={setSelectedSponsor} />
 
       <TournoisList tournois={displayList} onCardClick={setShowDetail} />
 
-      <SponsorBronzeRow sponsors={sponsors} showEmpty={showEmpty} />
+      <SponsorBronzeRow sponsors={sponsors} showEmpty={showEmpty} onSponsorClick={setSelectedSponsor} />
     </div>
   );
 }

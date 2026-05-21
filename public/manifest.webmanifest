@@ -1,0 +1,20 @@
+{
+  "name": "VolleyPéi",
+  "short_name": "VolleyPéi",
+  "description": "Le calendrier officiel du volley à La Réunion",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfbfd",
+  "theme_color": "#fbfbfd",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -49,23 +49,47 @@ function TabTournois({ tournois, onDelete }) {
         {tournois.map(t => {
           const badge = STATUS_BADGE[t.status] || STATUS_BADGE[STATUS.PENDING];
           return (
-            <div key={t.id} className="tbl-row">
+            <div key={t.id} className="tbl-row" style={{ alignItems: 'center' }}>
               <div style={{
                 fontSize: 13, fontWeight: 600, color: 'var(--t1)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>{t.nom}</div>
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span style={{
+                  background: badge.bg, color: badge.fg,
+                  borderRadius: 980, padding: '2px 7px',
+                  fontSize: 9, fontWeight: 700, flexShrink: 0,
+                }}>{badge.label}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.nom}</span>
+              </div>
 
               <div style={{
                 fontSize: 12, color: 'var(--t2)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>{t.ville || t.lieu}</div>
 
-              <div style={{ fontSize: 12, color: 'var(--t2)' }}>{formatDateFR(t.date)}</div>
+              <div style={{
+                fontSize: 12, color: 'var(--t2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+              }}>
+                <span>{formatDateFR(t.date)}</span>
+                <button
+                  onClick={() => onDelete(t.id)}
+                  style={{
+                    background: 'rgba(227,0,0,0.06)', border: 'none', color: 'var(--red)',
+                    fontSize: 13, cursor: 'pointer',
+                    width: 28, height: 28, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                  title="Supprimer"
+                  aria-label="Supprimer"
+                >✕</button>
+              </div>
 
               <div
                 style={{
                   fontSize: 12, color: 'var(--t3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
                 }}
                 className="hc"
               >
@@ -76,14 +100,6 @@ function TabTournois({ tournois, onDelete }) {
                 }}>
                   {badge.label}
                 </span>
-                <button
-                  onClick={() => onDelete(t.id)}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--red)',
-                    fontSize: 14, cursor: 'pointer', padding: '2px 5px', flexShrink: 0,
-                  }}
-                  title="Supprimer"
-                >✕</button>
               </div>
             </div>
           );

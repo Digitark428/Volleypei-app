@@ -1,6 +1,9 @@
 // src/admin/LoginAdmin.jsx — Connexion admin (mot de passe simple côté front)
+//
+// Sécurité : authentification basique par mot de passe stocké côté front.
+// C'est volontaire (système simplifié sans comptes Supabase). La protection
+// réelle des actions sensibles passe par les policies RLS côté serveur.
 import { useState } from 'react';
-import { LOGO_B64 } from '../lib/logo.js';
 import { ADMIN_USER, ADMIN_PWD } from '../lib/constants.js';
 
 function LoginAdmin({ onLogin, onBack }) {

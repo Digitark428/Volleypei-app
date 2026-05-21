@@ -1,6 +1,25 @@
 // src/modals/form/FormFields.jsx — Champs du formulaire (présentation seulement)
+//
+// Champs conservés (publication ultra-simple) :
+//   nom, date, heure, ville, lieu, type, nombre de joueurs,
+//   téléphone, email, description.
+//
+// Champs supprimés (v8) :
+//   nom_association, numero_identification (administratifs, friction inutile).
 
 const Required = () => <span style={{ color: 'var(--red)' }}>*</span>;
+
+/** Types de tournoi proposés — peut être étendu sans toucher au reste */
+const TYPES = [
+  'Beach volley',
+  'Volley en salle',
+  'Tournoi mixte',
+  'Tournoi 4×4',
+  'Tournoi 6×6',
+  'Compétition jeune',
+  'Tournoi amical',
+  'Autre',
+];
 
 function FormFields({ form, onChange }) {
   return (
@@ -14,6 +33,7 @@ function FormFields({ form, onChange }) {
             value={form.nom}
             onChange={e => onChange('nom', e.target.value)}
             className="field"
+            autoComplete="off"
           />
         </div>
 
@@ -45,6 +65,31 @@ function FormFields({ form, onChange }) {
             value={form.ville}
             onChange={e => onChange('ville', e.target.value)}
             className="field"
+            autoComplete="address-level2"
+          />
+        </div>
+
+        <div>
+          <label className="lbl">Type de tournoi <Required /></label>
+          <select
+            value={form.type || ''}
+            onChange={e => onChange('type', e.target.value)}
+            className="field"
+          >
+            <option value="" disabled>— Choisir —</option>
+            {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        <div style={{ gridColumn: '1/-1' }}>
+          <label className="lbl">Lieu (adresse précise) <Required /></label>
+          <input
+            type="text"
+            placeholder="Plage de Boucan Canot"
+            value={form.lieu}
+            onChange={e => onChange('lieu', e.target.value)}
+            className="field"
+            autoComplete="street-address"
           />
         </div>
 
@@ -61,19 +106,8 @@ function FormFields({ form, onChange }) {
           />
         </div>
 
-        <div style={{ gridColumn: '1/-1' }}>
-          <label className="lbl">Lieu <Required /></label>
-          <input
-            type="text"
-            placeholder="Plage de Boucan Canot"
-            value={form.lieu}
-            onChange={e => onChange('lieu', e.target.value)}
-            className="field"
-          />
-        </div>
-
         <div>
-          <label className="lbl">Téléphone <Required /></label>
+          <label className="lbl">Téléphone contact <Required /></label>
           <input
             type="tel"
             inputMode="tel"
@@ -81,10 +115,11 @@ function FormFields({ form, onChange }) {
             value={form.telephone}
             onChange={e => onChange('telephone', e.target.value)}
             className="field"
+            autoComplete="tel"
           />
         </div>
 
-        <div>
+        <div style={{ gridColumn: '1/-1' }}>
           <label className="lbl">Email <Required /></label>
           <input
             type="email"
@@ -93,28 +128,7 @@ function FormFields({ form, onChange }) {
             value={form.email}
             onChange={e => onChange('email', e.target.value)}
             className="field"
-          />
-        </div>
-
-        <div>
-          <label className="lbl">Association / Club <Required /></label>
-          <input
-            type="text"
-            placeholder="Volley Club de Saint-Pierre"
-            value={form.nom_association}
-            onChange={e => onChange('nom_association', e.target.value)}
-            className="field"
-          />
-        </div>
-
-        <div>
-          <label className="lbl">N° identification asso. <Required /></label>
-          <input
-            type="text"
-            placeholder="W974XXXXXXX / SIRET / RNA"
-            value={form.numero_identification}
-            onChange={e => onChange('numero_identification', e.target.value)}
-            className="field"
+            autoComplete="email"
           />
         </div>
       </div>

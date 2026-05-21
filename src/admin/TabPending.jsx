@@ -1,14 +1,22 @@
 // src/admin/TabPending.jsx — Onglet "Tournois en attente"
+//
+// Affiche les tournois publiés par le public, en attente de validation.
+// Actions admin : Valider (→ approved, apparaît dans le calendrier public)
+// ou Refuser (→ rejected, conservé pour audit mais invisible publiquement).
+
 import { formatDateFR } from '../lib/dates.js';
 
 function EmptyState() {
   return (
     <div style={{
       background: 'var(--s1)', border: '1px solid var(--b1)',
-      borderRadius: 14, padding: '48px', textAlign: 'center',
+      borderRadius: 14, padding: '48px 24px', textAlign: 'center',
     }}>
       <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
       <div style={{ color: 'var(--t3)', fontSize: 14 }}>Aucun tournoi en attente.</div>
+      <div style={{ color: 'var(--t4)', fontSize: 12, marginTop: 6 }}>
+        Les nouvelles soumissions apparaîtront ici en temps réel.
+      </div>
     </div>
   );
 }
@@ -40,25 +48,21 @@ function PendingCard({ tournoi: t, onApprove, onReject }) {
           <div style={{ fontSize: 12, color: 'var(--t3)' }}>
             📍 {t.lieu}{t.ville && `, ${t.ville}`}
           </div>
-          {t.nombre_joueurs > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-              👥 {t.nombre_joueurs} joueurs
-            </div>
-          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+            {t.type && <span className="tag tag-b">{t.type}</span>}
+            {t.nombre_joueurs > 0 && (
+              <span className="tag">👥 {t.nombre_joueurs} joueurs</span>
+            )}
+          </div>
         </div>
       </div>
 
       <div style={{
         background: 'var(--s3)', borderRadius: 10, padding: '10px 12px',
         marginBottom: 12, fontSize: 12, color: 'var(--t2)', lineHeight: 1.7,
+        wordBreak: 'break-word',
       }}>
         <div>📞 <strong>{t.telephone}</strong>{t.email && <> · ✉️ {t.email}</>}</div>
-        {t.nom_association && (
-          <div>
-            🏐 <strong>{t.nom_association}</strong>
-            {t.numero_identification && <> · n° {t.numero_identification}</>}
-          </div>
-        )}
         {t.description && (
           <div style={{ marginTop: 6, color: 'var(--t3)', fontStyle: 'italic' }}>
             "{t.description}"
@@ -66,7 +70,7 @@ function PendingCard({ tournoi: t, onApprove, onReject }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         <button onClick={() => onReject(t.id)} className="btn-reject">Refuser</button>
         <button onClick={() => onApprove(t.id)} className="btn-approve">✓ Valider et publier</button>
       </div>

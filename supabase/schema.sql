@@ -1,173 +1,150 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- VOLLEYPÉI — SCHÉMA SUPABASE COMPLET
+-- VOLLEYPÉI — Schéma Supabase (v7)
 -- ═══════════════════════════════════════════════════════════════════════════
--- 👉 Colle tout ce fichier dans :
---    Supabase Dashboard → SQL Editor → New query → Run
+-- 👉 À exécuter dans : Supabase Dashboard → SQL Editor → New query → Run
+--
+-- Architecture minimale (zéro système de comptes) :
+--   1. tournois  → publication publique, validation admin (status)
+--   2. sponsors  → gérés depuis l'espace admin
+--   3. visites   → tracking simple par jour
+--   4. storage   → bucket public 'volleypei'
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ─── EXTENSIONS ─────────────────────────────────────────────────────────────
+-- ─── Extensions ────────────────────────────────────────────────────────────
 create extension if not exists "uuid-ossp";
 
--- ─── TABLE : joueurs ────────────────────────────────────────────────────────
-create table if not exists joueurs (
-  id           uuid primary key default uuid_generate_v4(),
-  auth_user_id uuid references auth.users (id) on delete cascade,
-  prenom       text not null,
-  nom          text not null,
-  email        text not null unique,
-  ville        text not null default '',
-  created_at   timestamptz not null default now()
-);
-
-create index if not exists joueurs_email_idx on joueurs (email);
-
-alter table joueurs enable row level security;
-
-create policy "joueurs_select" on joueurs
-  for select using (true);
-
-create policy "joueurs_insert" on joueurs
-  for insert with check (true);
-
--- ─── TABLE : adhesions ──────────────────────────────────────────────────────
--- Demandes organisateur avant validation admin
-create table if not exists adhesions (
-  id           uuid primary key default uuid_generate_v4(),
-  prenom       text not null,
-  nom          text not null,
-  association  text not null,
-  email        text not null unique,
-  mdp_tmp      text not null default '',  -- effacé après validation
-  statut       text not null default 'en_attente', -- en_attente | validee | refusee
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
-);
-
-create index if not exists adhesions_email_idx  on adhesions (email);
-create index if not exists adhesions_statut_idx on adhesions (statut);
-
-alter table adhesions enable row level security;
-
--- Insertion publique (formulaire demande)
-create policy "adhesions_insert" on adhesions
-  for insert with check (true);
-
--- Lecture et modification réservées au service_role (Edge Function admin)
-create policy "adhesions_service_role" on adhesions
-  for all using (auth.role() = 'service_role');
-
--- ─── TABLE : organisateurs ──────────────────────────────────────────────────
--- Organisateurs validés, liés à auth.users
-create table if not exists organisateurs (
-  id           uuid primary key default uuid_generate_v4(),
-  auth_user_id uuid references auth.users (id) on delete cascade,
-  prenom       text not null,
-  nom          text not null,
-  association  text not null,
-  email        text not null unique,
-  ville        text not null default '',
-  created_at   timestamptz not null default now()
-);
-
-create index if not exists organisateurs_email_idx on organisateurs (email);
-
-alter table organisateurs enable row level security;
-
--- Un organisateur lit son propre profil
-create policy "organisateurs_select_own" on organisateurs
-  for select using (
-    auth.uid() = auth_user_id
-    or auth.role() = 'service_role'
-  );
-
--- ─── TABLE : tournois ───────────────────────────────────────────────────────
+-- ─── Table : tournois ──────────────────────────────────────────────────────
 create table if not exists tournois (
-  id           uuid primary key default uuid_generate_v4(),
-  nom          text not null,
-  date         date not null,
-  heure        text,
-  lieu         text not null,
-  ville        text not null default '',
-  type         text not null default 'Beach Volley',
-  joueurs      integer not null default 0,
-  contact      text not null,
-  organisateur text not null,
-  description  text not null default '',
-  affiche_url  text,                       -- URL Supabase Storage
-  lat          double precision,
-  lng          double precision,
-  created_by   text not null default '',   -- email organisateur
-  created_at   timestamptz not null default now()
+  id          uuid primary key default uuid_generate_v4(),
+  nom         text not null,
+  description text not null,
+  date        date not null,
+  ville       text not null,
+  lieu        text not null,
+  telephone   text not null,
+  email       text not null,
+  image_url   text,
+  latitude    numeric,
+  longitude   numeric,
+  status      text not null default 'pending'
+              check (status in ('pending', 'approved', 'rejected')),
+  created_at  timestamptz not null default now()
 );
 
-create index if not exists tournois_date_idx on tournois (date);
+create index if not exists tournois_status_idx on tournois (status);
+create index if not exists tournois_date_idx   on tournois (date);
 
 alter table tournois enable row level security;
 
--- Lecture publique
-create policy "tournois_select" on tournois
+-- Lecture publique : tous les tournois (le filtre 'approved' se fait côté front
+-- pour la liste publique). Permet aussi à l'admin de voir tous les statuts
+-- via la même clé anon (l'admin est protégé par mot de passe front-end).
+drop policy if exists "tournois_select_public" on tournois;
+create policy "tournois_select_public" on tournois
   for select using (true);
 
--- Insertion pour les organisateurs authentifiés
-create policy "tournois_insert" on tournois
-  for insert with check (
-    auth.role() = 'authenticated'
-    or auth.role() = 'service_role'
-  );
+-- Insertion publique : statut forcé à 'pending'
+drop policy if exists "tournois_insert_public" on tournois;
+create policy "tournois_insert_public" on tournois
+  for insert with check (status = 'pending');
 
--- Suppression par le créateur ou service_role
-create policy "tournois_delete" on tournois
-  for delete using (
-    created_by = (
-      select email from auth.users where id = auth.uid()
-    )
-    or auth.role() = 'service_role'
-  );
+-- Update / delete (admin)
+drop policy if exists "tournois_update_public" on tournois;
+create policy "tournois_update_public" on tournois
+  for update using (true);
 
--- ─── STORAGE : bucket volleypei ─────────────────────────────────────────────
--- Si l'INSERT échoue (bucket déjà existant), ignore l'erreur.
-insert into storage.buckets (id, name, public)
-  values ('volleypei', 'volleypei', true)
-  on conflict (id) do nothing;
+drop policy if exists "tournois_delete_public" on tournois;
+create policy "tournois_delete_public" on tournois
+  for delete using (true);
 
-create policy "storage_insert_auth" on storage.objects
-  for insert with check (
-    bucket_id = 'volleypei'
-    and auth.role() = 'authenticated'
-  );
-
-create policy "storage_select_public" on storage.objects
-  for select using (bucket_id = 'volleypei');
-
--- ─── TABLE : visites ─────────────────────────────────────────────────────────
--- Enregistre une visite par jour (upsert sur la date)
-create table if not exists visites (
+-- ─── Table : sponsors ──────────────────────────────────────────────────────
+create table if not exists sponsors (
   id         uuid primary key default uuid_generate_v4(),
-  jour       date not null unique,
-  nb         integer not null default 1,
-  created_at timestamptz not null default now(),
+  nom        text not null,
+  type       text not null check (type in ('gold', 'silver', 'bronze')),
+  image_url  text,
+  lien       text not null default '',
+  actif      boolean not null default true,
+  ordre      integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists sponsors_actif_idx on sponsors (actif);
+create index if not exists sponsors_type_idx  on sponsors (type);
+
+alter table sponsors enable row level security;
+
+drop policy if exists "sponsors_select_public" on sponsors;
+create policy "sponsors_select_public" on sponsors
+  for select using (true);
+
+drop policy if exists "sponsors_insert_public" on sponsors;
+create policy "sponsors_insert_public" on sponsors
+  for insert with check (true);
+
+drop policy if exists "sponsors_update_public" on sponsors;
+create policy "sponsors_update_public" on sponsors
+  for update using (true);
+
+drop policy if exists "sponsors_delete_public" on sponsors;
+create policy "sponsors_delete_public" on sponsors
+  for delete using (true);
+
+-- ─── Table : visites ───────────────────────────────────────────────────────
+create table if not exists visites (
+  jour       date primary key,
+  nb         integer not null default 0,
   updated_at timestamptz not null default now()
 );
 
 alter table visites enable row level security;
 
--- Insertion/update publique (tracker côté client)
-create policy "visites_insert" on visites
-  for insert with check (true);
-
-create policy "visites_update" on visites
-  for update using (true);
-
--- Lecture publique (widget visible sur le site)
-create policy "visites_select" on visites
+drop policy if exists "visites_select_public" on visites;
+create policy "visites_select_public" on visites
   for select using (true);
 
--- ─── FONCTION : upsert_visite ─────────────────────────────────────────────────
--- Incrémente le compteur du jour, ou insère 1 si le jour n'existe pas encore
+drop policy if exists "visites_insert_public" on visites;
+create policy "visites_insert_public" on visites
+  for insert with check (true);
+
+drop policy if exists "visites_update_public" on visites;
+create policy "visites_update_public" on visites
+  for update using (true);
+
+-- ─── Fonction : upsert_visite ─────────────────────────────────────────────
 create or replace function upsert_visite(p_jour date)
-returns void language plpgsql security definer as $$
+returns void
+language plpgsql
+security definer
+as $$
 begin
-  insert into visites (jour, nb) values (p_jour, 1)
-  on conflict (jour) do update set nb = visites.nb + 1, updated_at = now();
+  insert into visites (jour, nb)
+  values (p_jour, 1)
+  on conflict (jour)
+  do update set nb = visites.nb + 1, updated_at = now();
 end;
 $$;
+
+grant execute on function upsert_visite(date) to anon, authenticated;
+
+-- ─── Storage : bucket 'volleypei' ──────────────────────────────────────────
+-- Crée d'abord le bucket manuellement dans Supabase Dashboard :
+--   Storage → New bucket → nom : volleypei → Public ✅
+--
+-- Puis exécute ces policies :
+
+drop policy if exists "storage_insert_public" on storage.objects;
+create policy "storage_insert_public" on storage.objects
+  for insert with check (bucket_id = 'volleypei');
+
+drop policy if exists "storage_select_public" on storage.objects;
+create policy "storage_select_public" on storage.objects
+  for select using (bucket_id = 'volleypei');
+
+drop policy if exists "storage_delete_public" on storage.objects;
+create policy "storage_delete_public" on storage.objects
+  for delete using (bucket_id = 'volleypei');
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ✅ Fin du schéma
+-- ═══════════════════════════════════════════════════════════════════════════

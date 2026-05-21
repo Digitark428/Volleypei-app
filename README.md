@@ -1,48 +1,148 @@
 # VolleyPéi 🏐
 
-Le calendrier officiel du volley à La Réunion.
+Calendrier communautaire du volley à La Réunion.
 
-## 🚀 Déploiement Vercel (5 minutes)
+## Concept
 
-1. Va sur **vercel.com** → créer un compte gratuit
-2. "Add New..." → "Project" → importe ce dossier
-3. Vercel détecte Vite automatiquement → "Deploy"
-4. Site en ligne sur `volleypei-xxx.vercel.app` 🎉
+```
+Splash logo → Calendrier public
+              ↓
+       Publier un tournoi (ouvert à tous)
+              ↓
+       status: pending
+              ↓
+       Admin valide / refuse
+              ↓
+       status: approved  → visible publiquement
+```
 
-## 🛠️ Tester en local
+**Pas de comptes utilisateurs.** L'admin est protégé par un mot de passe front.
+
+## Architecture
+
+```
+src/
+├── App.jsx                          # Racine (64 lignes)
+├── main.jsx
+│
+├── lib/                             # Constantes, helpers purs
+│   ├── constants.js                 # STATUS, SPONSOR_TIERS, MOIS…
+│   ├── dates.js                     # helpers calendrier
+│   ├── styles.js                    # CSS global (injecté 1× au root)
+│   ├── logo.js                      # logo base64
+│   └── supabase.js                  # client Supabase
+│
+├── services/                        # Couche d'accès Supabase
+│   ├── index.js                     # barrel exports
+│   ├── tournois.js                  # CRUD tournois + workflow
+│   ├── sponsors.js                  # CRUD sponsors
+│   ├── stats.js                     # tracking visites + stats
+│   ├── storage.js                   # upload images
+│   └── geocoding.js                 # Nominatim (lieu → lat/lng)
+│
+├── hooks/                           # Hooks personnalisés
+│   ├── useTournois.js
+│   ├── useSponsors.js
+│   ├── useVisitStats.js
+│   └── useTournoiForm.js            # état + validation + submit du formulaire
+│
+├── components/                      # UI réutilisables
+│   ├── SplashScreen.jsx
+│   ├── NavBar.jsx
+│   ├── SponsorBlock.jsx
+│   └── TournoiCard.jsx
+│
+├── calendar/                        # Page calendrier découpée
+│   ├── PageCalendrier.jsx           # orchestrateur (126 lignes)
+│   ├── MonthGrid.jsx                # grille mensuelle
+│   ├── StatsPills.jsx               # pills visites/tournois
+│   ├── PublishBanner.jsx            # bannière confirmation
+│   ├── SelectedDateBar.jsx          # barre date sélectionnée
+│   ├── TournoisList.jsx             # liste des cartes
+│   └── SponsorSlots.jsx             # Gold/Silver/Bronze
+│
+├── pages/
+│   ├── PageCarte.jsx                # carte OSM + liste
+│   └── PagePartenaires.jsx          # aperçu (code partenaires974)
+│
+├── modals/
+│   ├── ModalTournoi.jsx             # détail tournoi
+│   ├── ModalFormTournoi.jsx         # orchestrateur form (111 lignes)
+│   └── form/                        # sous-composants form
+│       ├── FormAfficheUpload.jsx
+│       ├── FormFields.jsx
+│       ├── FormSuccess.jsx
+│       └── FormDoublonConfirm.jsx
+│
+└── admin/                           # Espace admin (kevinjuju / kevinjuju974)
+    ├── LoginAdmin.jsx
+    ├── PanneauAdmin.jsx             # orchestrateur (167 lignes)
+    ├── TabPending.jsx
+    ├── TabTournois.jsx
+    ├── TabSponsors.jsx
+    └── TabVisits.jsx
+```
+
+## Setup pour un nouveau Supabase
+
+### 1. Variables d'environnement
+
+Crée `.env.local` :
+
+```bash
+VITE_SUPABASE_URL=https://XXXXXXXX.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbG...
+```
+
+### 2. Base de données
+
+- Crée un nouveau projet sur https://supabase.com
+- SQL Editor → New query → colle `supabase/schema.sql` → Run
+
+### 3. Storage
+
+- Storage → New bucket
+- Nom : `volleypei`
+- Public : ✅
+- Les policies storage sont créées par `schema.sql`
+
+### 4. Lancer
 
 ```bash
 npm install
 npm run dev
 ```
-Ouvre http://localhost:5173
 
-## 🔐 Accès Admin
+## Identifiants
 
-- **Identifiant** : `kevinjuju`
-- **Mot de passe** : `kevinjuju974`
+| Espace | Login | Mot de passe |
+|---|---|---|
+| Admin | `kevinjuju` | `kevinjuju974` |
+| Partenaires (aperçu) | — | `partenaires974` |
 
-## 🤝 Page Partenaires (privée)
+## Schéma des données
 
-Accessible via : `https://ton-site.vercel.app/#partenaires`
-Ne pas partager publiquement — uniquement avec les futurs sponsors.
+### `tournois`
+- `id` (uuid)
+- `nom`, `description`, `date`, `ville`, `lieu`
+- `telephone`, `email`
+- `image_url` (Supabase Storage)
+- `latitude`, `longitude` (géocodage automatique)
+- `status` (`pending` | `approved` | `rejected`)
+- `created_at`
 
-## 📋 Fonctionnalités
+### `sponsors`
+- `id` (uuid)
+- `nom`, `type` (`gold` | `silver` | `bronze`)
+- `image_url`, `lien`, `actif`, `ordre`
 
-- ✅ Splash screen premium animé
-- ✅ Connexion email-first avec choix du rôle (Joueur / Organisateur)
-- ✅ Calendrier interactif
-- ✅ Cartes de tournois élégantes (Beach Volley, Green Volley, Indoor)
-- ✅ Système anti-doublon (avertissement non bloquant)
-- ✅ Carte interactive OpenStreetMap de La Réunion
-- ✅ Sponsors cachés si aucun actif
-- ✅ Page Partenaires privée avec démo réaliste
-- ✅ Panel admin complet (sponsors, tournois, joueurs)
-- ✅ 100% responsive mobile + desktop
-- ✅ Design Apple premium dark
+### `visites`
+- `jour` (PK), `nb`, `updated_at`
 
-## ⚙️ Si Vercel ne détecte pas Vite
+## Mobile-first
 
-- Framework Preset: Vite
-- Build Command: `npm run build`
-- Output Directory: `dist`
+- Form responsif (grid 2 col → 1 col < 520px)
+- Inputs `inputMode` adaptés (tel, email, numeric)
+- Upload images compatible iPhone (`accept="image/*"` + HEIC/HEIF)
+- CSS injecté une seule fois au root
+- Track visite déduplikiqué par jour via `localStorage`

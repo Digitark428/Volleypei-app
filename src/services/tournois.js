@@ -72,7 +72,26 @@ export async function createTournoi(form, imageFile) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // Diagnostic détaillé pour identifier les problèmes de schéma Supabase
+    console.error('[createTournoi] échec insert:', error);
+    console.error('[createTournoi] code:', error.code, '| message:', error.message);
+    console.error('[createTournoi] hint:', error.hint, '| details:', error.details);
+    console.error('[createTournoi] payload envoyé:', payload);
+
+    // Erreurs fréquentes côté Supabase si le schéma v9 n'a pas été exécuté :
+    if (error.code === '42703' || /column .* does not exist/i.test(error.message || '')) {
+      throw new Error(
+        "Colonne manquante dans Supabase. Exécutez le schéma v9 dans le SQL Editor."
+      );
+    }
+    if (error.code === '42501' || /policy/i.test(error.message || '') || /row-level security/i.test(error.message || '')) {
+      throw new Error(
+        "Policy RLS bloque l'insertion. Exécutez le schéma v9 dans le SQL Editor pour corriger les policies."
+      );
+    }
+    throw error;
+  }
   return normalize(data);
 }
 

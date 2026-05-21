@@ -43,21 +43,22 @@ alter table tournois add column if not exists heure          text    not null de
 alter table tournois add column if not exists type           text    not null default '';
 alter table tournois add column if not exists nombre_joueurs integer;
 
--- Supprimer la colonne status si elle existe encore (migration de v8 -> v9)
--- Les policies RLS qui filtrent sur status doivent etre supprimees AVANT la colonne,
--- sinon Postgres renvoie "cannot drop column because other objects depend on it".
+-- Migration v8 -> v9 : suppression de la colonne status sur tournois
+-- Les policies RLS dependent de cette colonne et doivent etre supprimees en DDL pur
+-- (pas dans un bloc do $$ car certaines versions Postgres refusent le DDL conditionnel).
+-- Ces drop policy sont idempotents (IF EXISTS) donc sans risque si deja absentes.
+drop policy if exists "tournois_insert_public" on tournois;
+drop policy if exists "tournois_select_public" on tournois;
+drop policy if exists "tournois_update_public" on tournois;
+drop policy if exists "tournois_delete_public" on tournois;
+
+-- Supprimer la colonne status (idempotent via do $$)
 do $$
 begin
   if exists (
     select 1 from information_schema.columns
     where table_name = 'tournois' and column_name = 'status'
   ) then
-    -- Drop des policies dependantes en premier
-    drop policy if exists "tournois_insert_public" on tournois;
-    drop policy if exists "tournois_select_public" on tournois;
-    drop policy if exists "tournois_update_public" on tournois;
-    drop policy if exists "tournois_delete_public" on tournois;
-    -- Maintenant on peut supprimer la colonne sans erreur
     alter table tournois drop column status;
   end if;
 end $$;

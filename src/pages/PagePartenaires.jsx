@@ -74,7 +74,6 @@ function PagePartenaires({ onBack, tournois }) {
   return (
     <div style={{
       background: 'var(--bg)',
-      minHeight: '100vh',
       minHeight: '100dvh',
       paddingTop: 'calc(var(--nav-h) + var(--safe-top))',
       paddingBottom: 'var(--safe-bottom)',

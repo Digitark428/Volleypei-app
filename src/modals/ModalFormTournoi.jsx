@@ -1,5 +1,5 @@
 // src/modals/ModalFormTournoi.jsx — Modal de publication d'un tournoi
-// Orchestre useTournoiForm + sous-composants UI.
+// v9 : publication directe, plus de validation admin.
 import { useState } from 'react';
 import { useTournoiForm } from '../hooks/useTournoiForm.js';
 import FormAfficheUpload  from './form/FormAfficheUpload.jsx';
@@ -10,12 +10,12 @@ import FormDoublonConfirm from './form/FormDoublonConfirm.jsx';
 function ModalFormTournoi({ tournois = [], initialDate, onClose, onPublished }) {
   const form = useTournoiForm(initialDate);
 
-  const [success, setSuccess]         = useState(false);
+  const [success, setSuccess]           = useState(false);
   const [doublonCount, setDoublonCount] = useState(0);
 
   // ─── Soumission orchestrée ────────────────────────────────────────────────
   async function trySubmit() {
-    // Vérifie d'abord les doublons (avertissement avant submit)
+    // Vérifie d'abord les doublons (avertissement avant publication)
     const doublons = tournois.filter(t => t.date === form.form.date);
     if (doublons.length > 0 && doublonCount === 0) {
       setDoublonCount(doublons.length);
@@ -41,8 +41,8 @@ function ModalFormTournoi({ tournois = [], initialDate, onClose, onPublished }) 
   }
 
   // ─── Écrans secondaires ──────────────────────────────────────────────────
-  if (success)         return <FormSuccess onClose={handleSuccessClose} />;
-  if (doublonCount)    return <FormDoublonConfirm count={doublonCount} onCancel={() => setDoublonCount(0)} onConfirm={doSubmit} />;
+  if (success)      return <FormSuccess onClose={handleSuccessClose} />;
+  if (doublonCount) return <FormDoublonConfirm count={doublonCount} onCancel={() => setDoublonCount(0)} onConfirm={doSubmit} />;
 
   // ─── Écran principal ─────────────────────────────────────────────────────
   return (
@@ -52,24 +52,10 @@ function ModalFormTournoi({ tournois = [], initialDate, onClose, onPublished }) 
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.4 }}>Publier un tournoi</div>
             <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-              Soumis pour validation avant publication
+              Visible immédiatement dans le calendrier public
             </div>
           </div>
           <button className="close-btn" onClick={onClose} aria-label="Fermer">×</button>
-        </div>
-
-        {/* ⚠️ Avertissement validation manuelle */}
-        <div style={{
-          background: 'rgba(227,0,0,0.06)',
-          border: '1.5px solid rgba(227,0,0,0.25)',
-          borderRadius: 12, padding: '12px 14px', marginBottom: 18,
-          display: 'flex', gap: 10, alignItems: 'flex-start',
-        }}>
-          <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1.2 }}>⚠️</span>
-          <div style={{ fontSize: 12, color: '#a30000', lineHeight: 1.5, fontWeight: 500 }}>
-            <strong>Attention :</strong> chaque tournoi est vérifié et validé manuellement avant publication.
-            Nous vous contacterons pour confirmer les informations.
-          </div>
         </div>
 
         {form.err && <div className="err-box">{form.err}</div>}
@@ -100,7 +86,7 @@ function ModalFormTournoi({ tournois = [], initialDate, onClose, onPublished }) 
             disabled={form.submitting}
             style={{ flex: 2, padding: '13px' }}
           >
-            {form.submitting ? 'Envoi en cours…' : 'Soumettre pour validation'}
+            {form.submitting ? 'Publication…' : 'Publier le tournoi'}
           </button>
         </div>
       </div>

@@ -1,217 +1,187 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- VOLLEYPÉI — Schéma Supabase (v9)
--- ═══════════════════════════════════════════════════════════════════════════
--- 👉 À exécuter dans : Supabase Dashboard → SQL Editor → New query → Run
--- 👉 IDEMPOTENT : tu peux l'exécuter plusieurs fois sans risque.
---
--- ARCHITECTURE MINIMALE :
---   1. tournois   → publication directe, aucune validation admin requise
---   2. sponsors   → gérés depuis l'espace admin
---   3. visites    → tracking simple par jour (upsert atomique)
---   4. storage    → bucket public 'volleypei'
---
--- CHANGEMENTS v9 :
---   - Suppression du champ `status` sur la table tournois
---   - Tout tournoi publié est immédiatement visible dans le calendrier
---   - Suppression des colonnes legacy nom_association / numero_identification
--- ═══════════════════════════════════════════════════════════════════════════
+-- =====================================================
+-- VOLLEY PÉI - Schéma Supabase
+-- =====================================================
+-- À exécuter dans l'éditeur SQL de Supabase
+-- =====================================================
 
--- ─── Extensions ────────────────────────────────────────────────────────────
+-- Extensions
 create extension if not exists "uuid-ossp";
 
--- ─── Table : tournois ──────────────────────────────────────────────────────
-create table if not exists tournois (
-  id             uuid primary key default uuid_generate_v4(),
-  nom            text not null,
-  description    text not null,
-  date           date not null,
-  heure          text not null default '',
-  ville          text not null,
-  lieu           text not null,
-  type           text not null default '',
-  telephone      text not null,
-  email          text not null,
-  nombre_joueurs integer,
-  image_url      text,
-  latitude       numeric,
-  longitude      numeric,
-  created_at     timestamptz not null default now()
+-- =====================================================
+-- TABLE : tournaments
+-- =====================================================
+create table if not exists public.tournaments (
+  id uuid primary key default uuid_generate_v4(),
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
+
+  -- Champs obligatoires
+  name text not null,
+  date date not null,
+  time time not null,
+  city text not null,
+  type text not null check (type in (
+    'Beach volley',
+    'Volley indoor',
+    'Green volley',
+    'Officiel LRVB',
+    'Sparing',
+    'Loisirs'
+  )),
+  location text not null,
+  players_count int not null,
+  description text not null,
+  poster_url text not null,
+
+  -- Champs optionnels
+  phone text,
+  email text,
+
+  -- Géolocalisation (optionnelle, pour la carte)
+  latitude double precision,
+  longitude double precision
 );
 
--- Migrations idempotentes si la table existait déjà avec les anciens champs
-alter table tournois add column if not exists heure          text    not null default '';
-alter table tournois add column if not exists type           text    not null default '';
-alter table tournois add column if not exists nombre_joueurs integer;
+create index if not exists tournaments_date_idx on public.tournaments(date);
+create index if not exists tournaments_type_idx on public.tournaments(type);
 
--- Migration v8 -> v9 : suppression de la colonne status sur tournois
--- Les policies RLS dependent de cette colonne et doivent etre supprimees en DDL pur
--- (pas dans un bloc do $$ car certaines versions Postgres refusent le DDL conditionnel).
--- Ces drop policy sont idempotents (IF EXISTS) donc sans risque si deja absentes.
-drop policy if exists "tournois_insert_public" on tournois;
-drop policy if exists "tournois_select_public" on tournois;
-drop policy if exists "tournois_update_public" on tournois;
-drop policy if exists "tournois_delete_public" on tournois;
+-- =====================================================
+-- TABLE : sponsors
+-- =====================================================
+create table if not exists public.sponsors (
+  id uuid primary key default uuid_generate_v4(),
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
 
--- Supprimer la colonne status (idempotent via do $$)
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_name = 'tournois' and column_name = 'status'
-  ) then
-    alter table tournois drop column status;
-  end if;
-end $$;
-
--- Supprimer les colonnes legacy si elles existent encore
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_name = 'tournois' and column_name = 'nom_association'
-  ) then
-    alter table tournois drop column nom_association;
-  end if;
-end $$;
-
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_name = 'tournois' and column_name = 'numero_identification'
-  ) then
-    alter table tournois drop column numero_identification;
-  end if;
-end $$;
-
-create index if not exists tournois_date_idx on tournois (date);
-
-alter table tournois enable row level security;
-
--- Lecture publique — tous les tournois sont visibles
-drop policy if exists "tournois_select_public" on tournois;
-create policy "tournois_select_public" on tournois
-  for select using (true);
-
--- Insertion publique sans restriction de status
-drop policy if exists "tournois_insert_public" on tournois;
-create policy "tournois_insert_public" on tournois
-  for insert with check (true);
-
--- Mise à jour (admin uniquement via front)
-drop policy if exists "tournois_update_public" on tournois;
-create policy "tournois_update_public" on tournois
-  for update using (true);
-
--- Suppression (admin uniquement via front)
-drop policy if exists "tournois_delete_public" on tournois;
-create policy "tournois_delete_public" on tournois
-  for delete using (true);
-
--- ─── Table : sponsors ──────────────────────────────────────────────────────
-create table if not exists sponsors (
-  id                uuid primary key default uuid_generate_v4(),
-  nom               text not null,
-  type              text not null check (type in ('gold', 'silver', 'bronze')),
-  slogan            text not null default '',
-  description_offre text not null default '',
-  image_url         text,
-  images            jsonb not null default '[]'::jsonb,
-  lien              text not null default '',
-  actif             boolean not null default true,
-  ordre             integer not null default 0,
-  status            text not null default 'approved'
-                    check (status in ('pending', 'approved', 'rejected')),
-  created_at        timestamptz not null default now()
+  name text not null,
+  category text not null check (category in ('gold', 'silver', 'bronze')),
+  image_url text not null,
+  slogan text,
+  website text,
+  phone text,
+  description text,
+  gallery jsonb default '[]'::jsonb,  -- tableau d'URLs (max 10)
+  display_order int default 0
 );
 
-alter table sponsors add column if not exists slogan            text  not null default '';
-alter table sponsors add column if not exists description_offre text  not null default '';
-alter table sponsors add column if not exists images            jsonb not null default '[]'::jsonb;
-alter table sponsors add column if not exists status            text  not null default 'approved';
+create index if not exists sponsors_category_idx on public.sponsors(category);
+create index if not exists sponsors_order_idx on public.sponsors(display_order);
 
--- Approuver tous les sponsors existants
-update sponsors set status = 'approved' where status = 'pending';
-
-create index if not exists sponsors_actif_idx  on sponsors (actif);
-create index if not exists sponsors_type_idx   on sponsors (type);
-create index if not exists sponsors_status_idx on sponsors (status);
-
-alter table sponsors enable row level security;
-
-drop policy if exists "sponsors_select_public" on sponsors;
-create policy "sponsors_select_public" on sponsors
-  for select using (true);
-
-drop policy if exists "sponsors_insert_public" on sponsors;
-create policy "sponsors_insert_public" on sponsors
-  for insert with check (true);
-
-drop policy if exists "sponsors_update_public" on sponsors;
-create policy "sponsors_update_public" on sponsors
-  for update using (true);
-
-drop policy if exists "sponsors_delete_public" on sponsors;
-create policy "sponsors_delete_public" on sponsors
-  for delete using (true);
-
--- ─── Table : visites ───────────────────────────────────────────────────────
-create table if not exists visites (
-  jour       date primary key,
-  nb         integer not null default 0,
-  updated_at timestamptz not null default now()
+-- =====================================================
+-- TABLE : visits (compteur visites)
+-- =====================================================
+create table if not exists public.visits (
+  id uuid primary key default uuid_generate_v4(),
+  visited_at timestamptz default now() not null,
+  date date generated always as (visited_at::date) stored
 );
 
-alter table visites enable row level security;
+create index if not exists visits_date_idx on public.visits(date);
+create index if not exists visits_at_idx on public.visits(visited_at);
 
-drop policy if exists "visites_select_public" on visites;
-create policy "visites_select_public" on visites
-  for select using (true);
-
-drop policy if exists "visites_insert_public" on visites;
-create policy "visites_insert_public" on visites
-  for insert with check (true);
-
-drop policy if exists "visites_update_public" on visites;
-create policy "visites_update_public" on visites
-  for update using (true);
-
--- ─── Fonction : upsert_visite (atomique) ──────────────────────────────────
--- ⚠️ CRITIQUE : cette fonction DOIT exister sinon les stats restent à 0
-create or replace function upsert_visite(p_jour date)
-returns void
-language plpgsql
-security definer
-as $$
+-- =====================================================
+-- TRIGGER : updated_at
+-- =====================================================
+create or replace function public.set_updated_at()
+returns trigger as $$
 begin
-  insert into visites (jour, nb, updated_at)
-  values (p_jour, 1, now())
-  on conflict (jour)
-  do update set
-    nb         = visites.nb + 1,
-    updated_at = now();
+  new.updated_at = now();
+  return new;
 end;
-$$;
+$$ language plpgsql;
 
--- Accorder les permissions à anon ET authenticated
-grant execute on function upsert_visite(date) to anon, authenticated;
+drop trigger if exists trg_tournaments_updated on public.tournaments;
+create trigger trg_tournaments_updated
+  before update on public.tournaments
+  for each row execute function public.set_updated_at();
 
--- ─── Storage : bucket 'volleypei' ──────────────────────────────────────────
--- ⚠️ Crée d'abord le bucket manuellement :
---   Storage → New bucket → nom : volleypei → Public ✅
+drop trigger if exists trg_sponsors_updated on public.sponsors;
+create trigger trg_sponsors_updated
+  before update on public.sponsors
+  for each row execute function public.set_updated_at();
 
-drop policy if exists "storage_insert_public" on storage.objects;
-create policy "storage_insert_public" on storage.objects
-  for insert with check (bucket_id = 'volleypei');
+-- =====================================================
+-- RLS (Row Level Security)
+-- =====================================================
+alter table public.tournaments enable row level security;
+alter table public.sponsors enable row level security;
+alter table public.visits enable row level security;
 
-drop policy if exists "storage_select_public" on storage.objects;
-create policy "storage_select_public" on storage.objects
-  for select using (bucket_id = 'volleypei');
+-- Lecture publique
+drop policy if exists "tournaments_select_public" on public.tournaments;
+create policy "tournaments_select_public" on public.tournaments
+  for select using (true);
 
-drop policy if exists "storage_delete_public" on storage.objects;
-create policy "storage_delete_public" on storage.objects
-  for delete using (bucket_id = 'volleypei');
+drop policy if exists "sponsors_select_public" on public.sponsors;
+create policy "sponsors_select_public" on public.sponsors
+  for select using (true);
 
--- ═══════════════════════════════════════════════════════════════════════════
--- ✅ Fin du schéma v9
--- ═══════════════════════════════════════════════════════════════════════════
+drop policy if exists "visits_select_public" on public.visits;
+create policy "visits_select_public" on public.visits
+  for select using (true);
+
+-- Insertion publique (publication libre de tournois, validation manuelle = false)
+drop policy if exists "tournaments_insert_public" on public.tournaments;
+create policy "tournaments_insert_public" on public.tournaments
+  for insert with check (true);
+
+drop policy if exists "visits_insert_public" on public.visits;
+create policy "visits_insert_public" on public.visits
+  for insert with check (true);
+
+-- Update / Delete : à protéger côté serveur via clé service_role pour l'admin
+-- (l'app utilise la clé anon en frontend, et un check de mot de passe simple côté UI)
+-- Pour autoriser la modification depuis l'admin sans auth Supabase, on ouvre tout :
+-- IMPORTANT : sécurité gérée par l'écran admin (mot de passe), à durcir en prod.
+drop policy if exists "tournaments_update_public" on public.tournaments;
+create policy "tournaments_update_public" on public.tournaments
+  for update using (true) with check (true);
+
+drop policy if exists "tournaments_delete_public" on public.tournaments;
+create policy "tournaments_delete_public" on public.tournaments
+  for delete using (true);
+
+drop policy if exists "sponsors_insert_public" on public.sponsors;
+create policy "sponsors_insert_public" on public.sponsors
+  for insert with check (true);
+
+drop policy if exists "sponsors_update_public" on public.sponsors;
+create policy "sponsors_update_public" on public.sponsors
+  for update using (true) with check (true);
+
+drop policy if exists "sponsors_delete_public" on public.sponsors;
+create policy "sponsors_delete_public" on public.sponsors
+  for delete using (true);
+
+-- =====================================================
+-- STORAGE : buckets
+-- =====================================================
+-- À créer manuellement dans l'UI Supabase OU via SQL :
+insert into storage.buckets (id, name, public)
+values ('posters', 'posters', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('sponsors', 'sponsors', true)
+on conflict (id) do nothing;
+
+-- Policies storage : upload public
+drop policy if exists "posters_insert_public" on storage.objects;
+create policy "posters_insert_public" on storage.objects
+  for insert with check (bucket_id = 'posters');
+
+drop policy if exists "posters_select_public" on storage.objects;
+create policy "posters_select_public" on storage.objects
+  for select using (bucket_id = 'posters');
+
+drop policy if exists "sponsors_insert_public" on storage.objects;
+create policy "sponsors_insert_public" on storage.objects
+  for insert with check (bucket_id = 'sponsors');
+
+drop policy if exists "sponsors_select_public" on storage.objects;
+create policy "sponsors_select_public" on storage.objects
+  for select using (bucket_id = 'sponsors');
+
+drop policy if exists "sponsors_delete_public" on storage.objects;
+create policy "sponsors_delete_public" on storage.objects
+  for delete using (bucket_id in ('sponsors', 'posters'));
